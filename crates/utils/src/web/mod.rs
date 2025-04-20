@@ -14,7 +14,7 @@ impl Plugin for WebPlugin {
 }
 
 #[cfg(target_arch = "wasm32")]
-fn update_window_size(mut window: Query<&mut Window, With<PrimaryWindow>>) {
+fn update_window_size(mut window: Query<&mut Window>) {
     (|| {
         let mut window = window.get_single_mut().ok()?;
         let browser_window = web_sys::window()?;

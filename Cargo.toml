@@ -28,7 +28,7 @@ game = { path = "./crates/game" }
 
 [dev-dependencies]
 bevy = "0.14"
-bevy-inspector-egui = "0.25.0"
+bevy-inspector-egui = "0.27.0"
 
 [package.metadata.docs.rs]
 all-features = true

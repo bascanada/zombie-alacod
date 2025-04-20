@@ -24,12 +24,12 @@ jobs:
           path: target_linux
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('Cargo.lock') }}
       - name: Dependency
-        run: sudo apt-get install g++ pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0 libwayland-dev libxkbcommon-dev && rustup component add rustfmt
+        run: sudo apt-get install g++ make pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0 libwayland-dev libxkbcommon-dev && rustup component add rustfmt
       - name: Dependencies
-        run: cargo vendor && cargo install --force cargo-make && cargo make dep-wasm --profile web
+        run: cargo vendor 
       - name: Test
-        run: cargo make test
+        run: make test
       - name: Style Check
-        run: cargo make format
+        run: make format
       - name: Build web
-        run: cargo make build-website --profile web
+        run: make build-website TARGET=web PROFILE=prod

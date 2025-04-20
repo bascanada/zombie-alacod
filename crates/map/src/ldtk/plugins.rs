@@ -14,7 +14,6 @@ use super::{
     map_const,
 };
 
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 pub struct EntityPlugin;
 
@@ -49,10 +48,15 @@ pub struct MyWorldInspectorPlugin;
 
 impl Plugin for MyWorldInspectorPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<RoomComponent>()
-            .register_type::<DoorComponent>()
-            .register_type::<WindowComponent>()
-            .register_type::<PlayerSpawnComponent>()
-            .add_plugins(WorldInspectorPlugin::new());
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            use bevy_inspector_egui::quick::WorldInspectorPlugin;
+            app.register_type::<RoomComponent>()
+                .register_type::<DoorComponent>()
+                .register_type::<WindowComponent>()
+                .register_type::<PlayerSpawnComponent>()
+                .add_plugins(WorldInspectorPlugin::new());
+
+        }
     }
 }
