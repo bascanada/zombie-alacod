@@ -8,7 +8,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  publish:
+  build_and_test:
     runs-on: ubuntu-latest
     steps:
       - name: Check out
@@ -25,10 +25,10 @@ jobs:
       - name: Dependency
         run: sudo apt-get install g++ make pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0 libwayland-dev libxkbcommon-dev && rustup component add rustfmt
       - name: Dependencies
-        run: cargo vendor 
+        run: cargo vendor && make dep_web
       - name: Test
         run: make test
       - name: Style Check
         run: make format
       - name: Build web
-        run: make build-website TARGET=web PROFILE=prod
+        run: make build_website TARGET=web PROFILE=prod
