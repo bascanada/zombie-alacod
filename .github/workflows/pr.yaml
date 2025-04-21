@@ -1,9 +1,15 @@
 name: Test PR
 
+
 on:
-  push:
-    pull_request:
-        types: [opened, reopened, edited]
+  pull_request:
+    branches:
+      - main      # Runs for PRs targeting the 'main' branch
+      - develop   # Also runs for PRs targeting the 'develop' branch
+    types:
+      - opened      # Run when a PR is first opened
+      - synchronize # Run when new commits are pushed to the PR branch
+      - reopened    # Run when a closed PR is reopened
 
 env: 
   CARGO_TERM_COLOR: always
