@@ -4,11 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'examples/**'
-      - 'website/**'
-      - 'crates/**'
-      - 'Cargo.toml'
 
 jobs:
   publish:
