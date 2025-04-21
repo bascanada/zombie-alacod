@@ -53,7 +53,7 @@ pub fn load_map(
 ) {
     set_global_config(config);
 
-    let ldtk_handle = asset_server.load_with_settings(
+    let ldtk_handle: LdtkProjectHandle = asset_server.load_with_settings(
         config.map_path.clone(),
         |s: &mut LdtkProjectLoaderSettings| unsafe {
             s.data = serde_json::to_value(&*CONFIG)
@@ -62,7 +62,7 @@ pub fn load_map(
                 .expect("Failed to convert value to object")
                 .clone();
         },
-    );
+    ).into();
 
     let level_set = LevelSet::default();
 

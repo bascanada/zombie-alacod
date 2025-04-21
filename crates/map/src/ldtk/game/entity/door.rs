@@ -24,6 +24,6 @@ impl DoorComponent {
 pub struct DoorBundle {
     #[with(DoorComponent::from_field)]
     door: DoorComponent,
-    #[sprite_sheet_bundle]
-    sprite_sheet: LdtkSpriteSheetBundle,
+    #[sprite_sheet]
+    sprite_sheet: Sprite,
 }

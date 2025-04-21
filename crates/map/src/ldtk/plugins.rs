@@ -21,7 +21,7 @@ impl Plugin for EntityPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            add_room_component_to_ldtk_level.run_if(on_event::<LevelEvent>()),
+            add_room_component_to_ldtk_level.run_if(on_event::<LevelEvent>),
         )
         .register_ldtk_entity::<PlayerSpawnBundle>(map_const::ENTITY_PLAYER_SPAWN_LOCATION)
         .register_ldtk_entity::<WindowBundle>(map_const::ENTITY_WINDOW_LOCATION)

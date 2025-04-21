@@ -15,6 +15,6 @@ impl WindowComponent {
 pub struct WindowBundle {
     #[with(WindowComponent::from_field)]
     door: WindowComponent,
-    #[sprite_sheet_bundle]
-    sprite_sheet: LdtkSpriteSheetBundle,
+    #[sprite_sheet]
+    sprite_sheet: Sprite,
 }
