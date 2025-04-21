@@ -8,8 +8,3 @@ enum GameState {
     Menu,
     Game,
 }
-
-
-
-
-

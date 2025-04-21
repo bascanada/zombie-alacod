@@ -14,7 +14,6 @@ use super::{
     map_const,
 };
 
-
 pub struct EntityPlugin;
 
 impl Plugin for EntityPlugin {
@@ -56,7 +55,6 @@ impl Plugin for MyWorldInspectorPlugin {
                 .register_type::<WindowComponent>()
                 .register_type::<PlayerSpawnComponent>()
                 .add_plugins(WorldInspectorPlugin::new());
-
         }
     }
 }

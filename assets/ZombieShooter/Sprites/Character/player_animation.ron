@@ -1,5 +1,5 @@
 (
-    frame_duration: 45,
+    frame_duration: 90,
     animations: {
         "Idle": (
             start: 0,

@@ -1,0 +1,44 @@
+// Get references to HTML elements
+const sidebarButtons = document.querySelectorAll('#sidebar button[data-app]');
+const reloadButton = document.getElementById('reload-button');
+const unloadButton = document.getElementById('unload-button'); // Get unload button
+const appFrame = document.getElementById('app-frame');
+
+// --- Attach Event Listeners ---
+
+const getFrameSrc = (appName) => {
+    return "./game.html?name=" + appName;
+}
+
+// App loading buttons
+sidebarButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        const appPath = button.dataset.app; // Get the HTML path
+        if (appPath) {
+            console.log(`Loading app from: ${appPath}`);
+            appFrame.src = getFrameSrc(appPath); // Set the iframe source
+        }
+    });
+});
+
+// Reload button
+reloadButton.addEventListener('click', () => {
+    const currentSrc = appFrame.getAttribute('src'); // Get current src safely
+    if (currentSrc && currentSrc !== 'about:blank') {
+        console.log(`Reloading iframe content: ${currentSrc}`);
+        // Re-assigning the src forces the iframe to reload
+        appFrame.src = currentSrc;
+    } else {
+        console.log("No app loaded in iframe to reload.");
+    }
+});
+
+// Unload button (Optional)
+unloadButton.addEventListener('click', () => {
+    console.log("Unloading app from iframe.");
+    appFrame.src = 'about:blank'; // Load an empty page
+});
+
+// --- Initial State ---
+// The iframe starts empty (src="about:blank")
+console.log("Iframe loader initialized. Select an app.");
