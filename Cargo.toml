@@ -46,7 +46,6 @@ name = "map_explorer"
 path = "examples/map_explorer.rs"
 
 [patch.crates-io]
-bevy_ecs_tilemap = { git = "https://github.com/StarArawn/bevy_ecs_tilemap", branch = "main" }
 bevy_ecs_ldtk = { git = "https://github.com/bascanada/bevy_ecs_ldtk", branch = "transform_ldtk_project" }
 
 

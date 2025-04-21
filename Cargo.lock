@@ -2459,7 +2459,7 @@ dependencies = [
  "rand",
  "serde",
  "serde_json",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
  "utils",
 ]
 
@@ -3108,7 +3108,7 @@ dependencies = [
  "rand",
  "serde",
  "serde_json",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
  "utils",
  "uuid",
 ]
@@ -6092,8 +6092,3 @@ checksum = "99a5bab8d7dedf81405c4bb1f2b83ea057643d9cb28778cea9eecddeedd2e028"
 dependencies = [
  "zune-core",
 ]
-
-[[patch.unused]]
-name = "bevy_ecs_tilemap"
-version = "0.16.0-rc.2"
-source = "git+https://github.com/StarArawn/bevy_ecs_tilemap?branch=main#843f7be28f1d6c0b4709403f50608e16abaa8477"

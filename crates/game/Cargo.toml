@@ -9,7 +9,7 @@ bevy = "*"
 
 utils = { path = "../utils"}
 
-thiserror = "1.0.60"
+thiserror = "2.0.12"
 
 rand = "0.8.5"
 
