@@ -8,6 +8,7 @@ edition = "2021"
 bevy = "*"
 
 utils = { path = "../utils"}
+animation ={ path = "../animation"}
 
 thiserror = "2.0.12"
 

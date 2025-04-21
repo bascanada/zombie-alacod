@@ -1,0 +1,11 @@
+[package]
+name = "animation"
+version = "0.2.0"
+edition = "2021"
+
+[dependencies]
+bevy = "0.15"
+
+serde = { version = "1.0", features = ["derive"] }
+
+bevy_common_assets = { version = "0.12", features = ["ron"] }
