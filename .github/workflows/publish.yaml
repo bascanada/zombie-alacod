@@ -29,7 +29,7 @@ jobs:
       - name: Dependency
         run: sudo apt-get install g++ make pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0 libwayland-dev libxkbcommon-dev && rustup component add rustfmt
       - name: Dependencies
-        run: cargo vendor && make dep_web
+        run: cargo vendor && (make dep_web || echo "ok")
       - name: Build web
         run: make build_website TARGET=web PROFILE=prod
       - name: Deploy
