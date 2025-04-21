@@ -14,30 +14,29 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out
-        uses: actions/checkout@v1
-      - name: Cache cargo registry
-        uses: actions/cache@v1
+          - name: Check out
+        uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('Cargo.lock') }}
-      - name: Cache cargo build
-        uses: actions/cache@v1
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+            target_wasm/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Dependency
+        run: sudo apt-get install g++ make pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0 libwayland-dev libxkbcommon-dev && rustup component add rustfmt
+      - name: Dependencies
+        run: cargo vendor && make dep_web
+      - name: Build web
+        run: make build_website TARGET=web PROFILE=prod
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: target_wasm32
-          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('Cargo.lock') }}
-      #- uses: actions-rs/toolchain@v1
-      #  with:
-      #    toolchain: nightly-2022-04-13
-      #    override: true
-      - name: Generate website
-        run: ./build install_web_dependency && ./build build_web_release
-      - name: Publish generated content to GitHub Pages
-        uses: tsunematsu21/actions-publish-gh-pages@v1.0.2
-        with:
-          dir: website/
-          branch: gh-pages
-          token: ${{ secrets.ACCESS_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./website
   #release_dev:
   #  runs-on: macos-latest
   #  steps:

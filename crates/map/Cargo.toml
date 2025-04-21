@@ -10,7 +10,7 @@ bevy_ecs_ldtk = { version = "*", default-features = true }
 
 utils = { path = "../utils"}
 
-thiserror = "1.0.60"
+thiserror = "2.0.12"
 
 rand = "0.8.5"
 
@@ -20,4 +20,4 @@ once_cell = "1.19.0"
 pathfinding = "4.9.1"
 uuid = "1.11.0"
 
-bevy-inspector-egui = "0.25.0"
+bevy-inspector-egui = "*"

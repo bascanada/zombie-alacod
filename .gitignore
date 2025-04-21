@@ -7,5 +7,4 @@
 **/public/assets/
 *generated.ldtk
 
-website/wasm*
-website/assets
+website/*/

@@ -9,7 +9,7 @@ use crate::{
 pub fn add_room_component_to_ldtk_level(
     mut level_events: EventReader<LevelEvent>,
     levels: Query<(Entity, &LevelIid)>,
-    projects: Query<&Handle<LdtkProject>>,
+    projects: Query<&LdtkProjectHandle>,
     project_assets: Res<Assets<LdtkProject>>,
     mut commands: Commands,
 ) {

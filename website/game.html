@@ -1,10 +1,14 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@600&display=swap" rel="stylesheet">
   <script type="module">
-    import init from './wasm.js'
-    init()
+    const urlParams = new URLSearchParams(window.location.search);
+    const name = "./" + urlParams.get("name") + "/wasm.js";
+    import(name).then((module) => {
+      console.log(module);
+      module.default();
+      auto_focus();
+    });
     function auto_focus() {
       let canvas = document.getElementsByTagName("bevy-canvas");
       if (!canvas.length) {
@@ -13,7 +17,6 @@
         canvas[0].focus();
       }
     }
-  auto_focus();
   </script>
   <style>
     * {

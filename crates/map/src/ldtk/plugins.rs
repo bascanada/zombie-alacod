@@ -14,15 +14,13 @@ use super::{
     map_const,
 };
 
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
-
 pub struct EntityPlugin;
 
 impl Plugin for EntityPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            add_room_component_to_ldtk_level.run_if(on_event::<LevelEvent>()),
+            add_room_component_to_ldtk_level.run_if(on_event::<LevelEvent>),
         )
         .register_ldtk_entity::<PlayerSpawnBundle>(map_const::ENTITY_PLAYER_SPAWN_LOCATION)
         .register_ldtk_entity::<WindowBundle>(map_const::ENTITY_WINDOW_LOCATION)
@@ -49,10 +47,14 @@ pub struct MyWorldInspectorPlugin;
 
 impl Plugin for MyWorldInspectorPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<RoomComponent>()
-            .register_type::<DoorComponent>()
-            .register_type::<WindowComponent>()
-            .register_type::<PlayerSpawnComponent>()
-            .add_plugins(WorldInspectorPlugin::new());
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            use bevy_inspector_egui::quick::WorldInspectorPlugin;
+            app.register_type::<RoomComponent>()
+                .register_type::<DoorComponent>()
+                .register_type::<WindowComponent>()
+                .register_type::<PlayerSpawnComponent>()
+                .add_plugins(WorldInspectorPlugin::new());
+        }
     }
 }

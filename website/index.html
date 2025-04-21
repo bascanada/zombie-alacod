@@ -1,14 +1,25 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@600&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bevy WASM App Loader</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body style="display: flex; flex-direction: row; height: 100%; width: 100%;">
-    <div style="background-color: red; height: 100%; width: 10%;">
+<body>
+    <div class="container">
+        <div id="sidebar">
+            <h2>Demo Apps</h2>
+            <button data-app="character_tester">Character Tester</button>
+            <button data-app="map_preview">Map Preview</button>
+            <hr>
+            <button id="reload-button">Reload Current App</button>
+            <button id="unload-button">Unload Current App</button>
+        </div>
+        <iframe id="app-frame" style="width: 100%;" src="about:blank"></iframe>
 
     </div>
-    <div style="width: 90%; height: 100%;">
-        <iframe src="game.html" width="100%" height="100%" title="Iframe Example"></iframe> 
-    </div>
+
+    <script src="main.js" defer></script>
 </body>
 </html>
