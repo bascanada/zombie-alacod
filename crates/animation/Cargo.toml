@@ -4,8 +4,8 @@ version = "0.2.0"
 edition = "2021"
 
 [dependencies]
-bevy = { workspace = true }
+bevy = "0.15"
 
-serde = { workspace = true }
+serde = { version = "1.0", features = ["derive"] }
 
-bevy_common_assets = { workspace = true }
+bevy_common_assets = { version = "0.12", features = ["ron"] }

@@ -8,7 +8,7 @@ use animation::{AnimationState, D2AnimationPlugin};
 use bevy_ggrs::GgrsPlugin;
 
 
-use crate::{character::{movement::Velocity, player::{config::PlayerConfig, control::PlayerAction, input::{apply_friction, apply_inputs, move_characters, read_local_inputs, update_animation_state}, jjrs::BoxConfig, Player}}, jjrs::{setup_ggrs, GggrsSessionConfiguration}};
+use crate::{character::{movement::Velocity, player::{config::PlayerConfig, control::PlayerAction, input::{apply_friction, apply_inputs, move_characters, read_local_inputs, update_animation_state}, jjrs::BoxConfig, Player}}, frame::{increase_frame_system, FrameCount}, jjrs::{setup_ggrs, GggrsSessionConfiguration}};
 
 pub struct BaseZombieGamePlugin;
 
@@ -24,6 +24,7 @@ impl Plugin for BaseZombieGamePlugin {
 
         app.set_rollback_schedule_fps(60);
         app.add_plugins(GgrsPlugin::<BoxConfig>::default())
+            .rollback_resource_with_copy::<FrameCount>()
             .rollback_component_with_clone::<Transform>()
             .rollback_component_with_reflect::<Velocity>()
             .rollback_component_with_reflect::<AnimationState>()
@@ -33,12 +34,14 @@ impl Plugin for BaseZombieGamePlugin {
         app.insert_resource(GggrsSessionConfiguration {input_delay: 5, max_player: 1});
         app.add_systems(Startup, setup_ggrs);
         app.add_systems(ReadInputs, read_local_inputs);
+        app.insert_resource(FrameCount { frame: 0 });
         app.add_systems(
             GgrsSchedule, (
                 apply_inputs,
                 apply_friction.after(apply_inputs),
                 move_characters.after(apply_friction),
                 update_animation_state.after(move_characters),
+                increase_frame_system.after(update_animation_state)
             ));
     }
 }

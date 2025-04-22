@@ -5,7 +5,7 @@ use animation::{
 
 use leafwing_input_manager::{plugin::InputManagerPlugin, prelude::*};
 use bevy::{prelude::*, utils::hashbrown::HashMap, window::WindowResolution};
-use game::{character::{movement::Velocity, player::{config::{PlayerConfig, PlayerConfigHandles}, control::{get_input_map, PlayerAction}, Player}}, plugins::BaseZombieGamePlugin};
+use game::{character::{movement::Velocity, player::{config::{PlayerConfig, PlayerConfigHandles}, control::{get_input_map, PlayerAction}, Player}}, frame::FrameDebugUIPlugin, plugins::BaseZombieGamePlugin};
 
 use bevy_ggrs::{
     AddRollbackCommandExtension, GgrsConfig, LocalInputs, LocalPlayers, PlayerInputs, Rollback,
@@ -34,7 +34,8 @@ fn main() {
                 .set(ImagePlugin::default_nearest())
                 .set(window_plugin),
         )
-        .add_plugins(WebPlugin {})
+        .add_plugins(WebPlugin{})
+        .add_plugins(FrameDebugUIPlugin)
         .add_plugins(BaseZombieGamePlugin)
         .add_systems(Startup, (setup_camera, setup))
         .run();
