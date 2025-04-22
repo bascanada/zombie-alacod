@@ -30,7 +30,7 @@ bevy_ecs_ldtk = { version = "0.11", default-features = true }
 bevy = { version = "0.15", default-features = false, features = ["bevy_sprite", "bevy_render", "bevy_core_pipeline"] }
 bevy_common_assets = { version = "0.12", features = ["ron"]}
 bevy_ggrs = "0.17"
-ggrs = { git = "https://github.com/gschup/ggrs", features = ["sync-send"] }
+ggrs = { version = "0.11.0", features = ["sync-send"] }
 bevy-inspector-egui = "0.30.0"
 leafwing-input-manager = "0.16"
 

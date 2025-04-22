@@ -824,7 +824,7 @@ checksum = "03bffc1632fc3b2256f057804e97e027cc7ce7c28ecd90505c00cb36ae2caedd"
 dependencies = [
  "bevy",
  "disqualified",
- "ggrs 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ggrs",
  "log",
  "seahash",
  "serde",
@@ -2579,7 +2579,7 @@ dependencies = [
  "bevy-inspector-egui",
  "bevy_common_assets",
  "bevy_ggrs",
- "ggrs 0.11.0 (git+https://github.com/gschup/ggrs)",
+ "ggrs",
  "leafwing-input-manager",
  "once_cell",
  "pathfinding",
@@ -2630,21 +2630,6 @@ name = "ggrs"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6961c572ec0692fd73a31f335db5e8b92b165c4d43e180ae0aaa64411d9baeb9"
-dependencies = [
- "bincode",
- "bitfield-rle",
- "instant",
- "js-sys",
- "parking_lot",
- "rand",
- "serde",
- "tracing",
-]
-
-[[package]]
-name = "ggrs"
-version = "0.11.0"
-source = "git+https://github.com/gschup/ggrs#989d2eb8dbe4d6cc028dab4bfd3f571f87631396"
 dependencies = [
  "bincode",
  "bitfield-rle",
