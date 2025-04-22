@@ -1,0 +1,7 @@
+(
+    path: "ZombieShooter/Sprites/Character/Shirt/Shirt1.png",
+    tile_size: (32, 32),
+    columns: 10,
+
+    rows: 1,
+)
