@@ -5,7 +5,16 @@ version = "0.2.0"
 edition = "2021"
 
 [dependencies]
-bevy = "*"
+bevy = "0.15"
+
+bevy_common_assets = { version = "0.12", features = ["ron"] }
+
+bevy_ggrs = "0.17"
+ggrs = { git = "https://github.com/gschup/ggrs", features = ["sync-send"] }
+
+leafwing-input-manager = "0.16"
+
+bincode = "2.0.1"
 
 utils = { path = "../utils"}
 animation ={ path = "../animation"}

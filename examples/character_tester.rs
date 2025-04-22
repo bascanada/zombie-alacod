@@ -2,8 +2,16 @@ use animation::{
     AnimationBundle, AnimationMapConfig, AnimationState, CharacterAnimationHandles,
     D2AnimationPlugin, SpriteSheetConfig,
 };
+
+use leafwing_input_manager::{plugin::InputManagerPlugin, prelude::*};
 use bevy::{prelude::*, utils::hashbrown::HashMap, window::WindowResolution};
+use game::{character::{movement::Velocity, player::{control::{get_input_map, PlayerAction}, Player}}, plugins::BaseZombieGamePlugin};
 use rand::seq::SliceRandom;
+
+use bevy_ggrs::{
+    AddRollbackCommandExtension, GgrsConfig, LocalInputs, LocalPlayers, PlayerInputs, Rollback,
+    Session,
+};
 
 use utils::{camera::tod::setup_camera, web::WebPlugin};
 
@@ -27,7 +35,7 @@ fn main() {
                 .set(ImagePlugin::default_nearest())
                 .set(window_plugin),
         )
-        .add_plugins(D2AnimationPlugin)
+        .add_plugins(BaseZombieGamePlugin)
         .add_systems(Startup, (setup_camera, setup))
         .add_systems(Update, random_animation_on_r_key_system)
         .add_plugins(WebPlugin {})
@@ -84,6 +92,15 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     commands.spawn((
         Transform::from_scale(Vec3::splat(6.0)).with_translation(Vec3::new(-50.0, 0.0, 0.0)),
+
+        Player { handle: 0 },
+        Velocity(Vec2::ZERO),
+
+        InputManagerBundle::<PlayerAction> {
+            action_state: ActionState::default(),
+            input_map: get_input_map(),
+        },
+
         animation_bundle,
-    ));
+    )).add_rollback();
 }
