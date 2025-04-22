@@ -21,7 +21,10 @@ map = { path = "./crates/map" }
 game = { path = "./crates/game" }
 animation = { path = "./crates/animation" }
 bevy_ggrs = {workspace = true}
+bevy_ecs_ldtk = {workspace = true}
 leafwing-input-manager = {workspace = true}
+serde_json = {workspace = true}
+rand = {workspace = true}
 
 
 [workspace.dependencies]

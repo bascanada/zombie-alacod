@@ -6345,10 +6345,13 @@ version = "0.0.1"
 dependencies = [
  "animation",
  "bevy",
+ "bevy_ecs_ldtk",
  "bevy_ggrs",
  "game",
  "leafwing-input-manager",
  "map",
+ "rand",
+ "serde_json",
  "utils",
 ]
 
