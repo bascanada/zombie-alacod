@@ -41,7 +41,6 @@ fn main() {
         .add_systems(Startup, setup_generated_map)
         .add_plugins(WebPlugin {})
         .add_plugins(LdtkRoguePlugin)
-        .add_plugins(BaseZombieGamePlugin)
         .add_systems(Update, load_levels_if_not_present)
         .insert_resource(map_generation_config)
         .register_asset_loader(level_loader)

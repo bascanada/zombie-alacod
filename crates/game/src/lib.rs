@@ -1,3 +1,4 @@
-pub mod entity;
 pub mod plugins;
-pub mod state;
+pub mod character;
+pub mod jjrs;
+pub mod frame;
