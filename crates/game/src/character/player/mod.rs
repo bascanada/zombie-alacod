@@ -1,5 +1,7 @@
 pub mod control;
 pub mod jjrs;
+pub mod input;
+pub mod config;
 
 use bevy::prelude::*;
 use ggrs::PlayerHandle;

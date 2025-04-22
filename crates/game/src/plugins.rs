@@ -1,6 +1,5 @@
 use bevy::{prelude::*, time::Time, utils::HashMap};
 use bevy_ggrs::{ggrs::PlayerType, prelude::*, GgrsSchedule};
-use bincode; // For serializing input
 use leafwing_input_manager::{plugin::InputManagerPlugin, prelude::*};
 use std::hash::Hash; // Needed for GGRS state checksumming if reflecting components
 use bevy_common_assets::ron::RonAssetPlugin;
@@ -9,7 +8,7 @@ use animation::{AnimationState, D2AnimationPlugin};
 use bevy_ggrs::GgrsPlugin;
 
 
-use crate::{character::{movement::Velocity, player::{control::PlayerAction, jjrs::BoxConfig, Player}, PlayerConfig}, input::{apply_friction, apply_inputs, move_characters, read_local_inputs, update_animation_state}, jjrs::{setup_ggrs, GggrsSessionConfiguration}};
+use crate::{character::{movement::Velocity, player::{config::PlayerConfig, control::PlayerAction, input::{apply_friction, apply_inputs, move_characters, read_local_inputs, update_animation_state}, jjrs::BoxConfig, Player}}, jjrs::{setup_ggrs, GggrsSessionConfiguration}};
 
 pub struct BaseZombieGamePlugin;
 
@@ -18,7 +17,7 @@ impl Plugin for BaseZombieGamePlugin {
         app.add_plugins(D2AnimationPlugin);
 
         app.add_plugins((
-            RonAssetPlugin::<PlayerConfig>::new(&["ron"])
+            RonAssetPlugin::<PlayerConfig>::new(&["ron"]),
         ));
 
         app.add_plugins(InputManagerPlugin::<PlayerAction>::default());

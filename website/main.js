@@ -42,3 +42,22 @@ unloadButton.addEventListener('click', () => {
 // --- Initial State ---
 // The iframe starts empty (src="about:blank")
 console.log("Iframe loader initialized. Select an app.");
+
+
+// --- Service Worker Registration ---
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js') // Path relative to origin root
+            .then((registration) => {
+                console.log('Service Worker registered successfully with scope: ', registration.scope);
+                document.getElementById('status').textContent = 'Service Worker registered. App should load faster next time!';
+            })
+            .catch((error) => {
+                console.error('Service Worker registration failed: ', error);
+                document.getElementById('status').textContent = 'Service Worker registration failed.';
+            });
+    });
+} else {
+    console.log('Service Workers not supported in this browser.');
+    document.getElementById('status').textContent = 'Service Workers not supported. App will load normally.';
+}
