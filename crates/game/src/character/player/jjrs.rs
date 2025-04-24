@@ -1,6 +1,7 @@
 
 use bevy::prelude::*;
 use bevy_ggrs::GgrsConfig;
+use bevy_matchbox::prelude::PeerId;
 use ggrs::{Config, PlayerHandle};
 use serde::{Deserialize, Serialize};
 
@@ -11,3 +12,4 @@ use serde::{Deserialize, Serialize};
 pub struct BoxInput(pub u16);
 
 pub type BoxConfig = GgrsConfig<BoxInput>;
+pub type PeerConfig = GgrsConfig<BoxInput, PeerId>;

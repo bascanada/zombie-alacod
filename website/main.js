@@ -7,7 +7,7 @@ const appFrame = document.getElementById('app-frame');
 // --- Attach Event Listeners ---
 
 const getFrameSrc = (appName) => {
-    return "./game.html?name=" + appName;
+    return "./game.html?name=" + appName + "&matchbox=ws://127.0.0.1:3536/extreme_bevy?next=2";
 }
 
 // App loading buttons
@@ -45,7 +45,7 @@ console.log("Iframe loader initialized. Select an app.");
 
 
 // --- Service Worker Registration ---
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && false) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js') // Path relative to origin root
             .then((registration) => {

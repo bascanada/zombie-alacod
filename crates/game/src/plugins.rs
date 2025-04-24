@@ -8,9 +8,22 @@ use animation::{AnimationState, D2AnimationPlugin};
 use bevy_ggrs::GgrsPlugin;
 
 
-use crate::{character::{movement::Velocity, player::{config::PlayerConfig, control::PlayerAction, input::{apply_friction, apply_inputs, move_characters, read_local_inputs, update_animation_state}, jjrs::BoxConfig, Player}}, frame::{increase_frame_system, FrameCount}, jjrs::{setup_ggrs, GggrsSessionConfiguration}};
+use crate::{character::{movement::Velocity, player::{config::PlayerConfig, control::PlayerAction, input::{apply_friction, apply_inputs, move_characters, read_local_inputs, update_animation_state}, jjrs::BoxConfig, Player}}, frame::{increase_frame_system, FrameCount}, jjrs::{setup_ggrs_local, start_matchbox_socket, wait_for_players, GggrsSessionConfiguration}};
 
-pub struct BaseZombieGamePlugin;
+#[derive(Debug, Clone, Default, Eq, PartialEq, Hash, States)]
+enum AppState {
+    #[default]
+    Lobby,
+    InGame,
+}
+
+pub struct BaseZombieGamePlugin { online: bool }
+
+impl BaseZombieGamePlugin {
+    pub fn new(online: bool) -> Self {
+        Self { online: online }
+    }
+}
 
 impl Plugin for BaseZombieGamePlugin {
     fn build(&self, app: &mut App) {
@@ -22,6 +35,8 @@ impl Plugin for BaseZombieGamePlugin {
 
         app.add_plugins(InputManagerPlugin::<PlayerAction>::default());
 
+        app.init_state::<AppState>();
+
         app.set_rollback_schedule_fps(60);
         app.add_plugins(GgrsPlugin::<BoxConfig>::default())
             .rollback_resource_with_copy::<FrameCount>()
@@ -30,9 +45,13 @@ impl Plugin for BaseZombieGamePlugin {
             .rollback_component_with_reflect::<AnimationState>()
             .rollback_component_with_reflect::<Player>();
 
+        if self.online {
+            app.add_systems(Startup, start_matchbox_socket);
+            app.add_systems(Update, wait_for_players);
+        } else {
+            app.add_systems(Startup, setup_ggrs_local);
+        }
 
-        app.insert_resource(GggrsSessionConfiguration {input_delay: 5, max_player: 1});
-        app.add_systems(Startup, setup_ggrs);
         app.add_systems(ReadInputs, read_local_inputs);
         app.insert_resource(FrameCount { frame: 0 });
         app.add_systems(

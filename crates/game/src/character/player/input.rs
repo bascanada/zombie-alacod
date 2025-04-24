@@ -11,6 +11,7 @@ use crate::character::player::{control::PlayerAction, jjrs::BoxInput, Player};
 
 use super::config::PlayerConfig;
 use super::config::PlayerConfigHandles;
+use super::LocalPlayer;
 
 const INPUT_UP: u16 = 1 << 0;
 const INPUT_DOWN: u16 = 1 << 1;
@@ -19,7 +20,7 @@ const INPUT_RIGHT: u16 = 1 << 3;
 
 pub fn read_local_inputs(
     mut commands: Commands,
-    players: Query<(&ActionState<PlayerAction>, &Player)>,
+    players: Query<(&ActionState<PlayerAction>, &Player), With<LocalPlayer>>,
 ) {
 
     let mut local_inputs = HashMap::new();
