@@ -8,6 +8,7 @@ edition = "2021"
 bevy = "0.15"
 ggrs = "0.11.0"
 bevy_ggrs = "0.17.0"
+bevy_matchbox = { version = "0.11", features = ["ggrs"] }
 leafwing-input-manager = "0.16.0"
 bevy_common_assets = { version = "0.12", features = ["ron"]}
 

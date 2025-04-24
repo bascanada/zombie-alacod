@@ -57,6 +57,8 @@ dep_web:
 	rustup target add wasm32-unknown-unknown
 	cargo install wasm-bindgen-cli
 
+dep_matchbox:
+	cargo install matchbox_server
 
 # Dev run
 
@@ -69,11 +71,28 @@ map_generation:
 map_explorer:
 	cargo run --example map_explorer $(ARGS) --features native
 
-character_tester:
-	cargo run --example character_tester $(ARGS) --features native
 
-host_website: build_website
-	cd website && python3 -m http.server
+character_tester:
+	cargo run --example character_tester $(ARGS) --features native -- --local-port 7000 --players localhost
+
+character_tester_1:
+	cargo run --example character_tester $(ARGS) --features native -- --local-port 7000 --players localhost 127.0.0.1:7001
+
+character_tester_2:
+	cargo run --example character_tester $(ARGS) --features native -- --local-port 7001 --players 127.0.0.1:7000 localhost
+
+character_tester_matchbox:
+	cargo run --example character_tester $(ARGS) --features native -- --number-player 2 --matchbox "ws://127.0.0.1:3536/extreme_bevy?next=2" --players localhost remote
+
+character_tester_matchbox_2:
+	cargo run --example character_tester $(ARGS) --features native -- --number-player 2 --matchbox "ws://127.0.0.1:3536/extreme_bevy?next=2" --players remote localhost
+
+
+matchbox_server:
+	matchbox_server
+
+host_website:
+	cd website && python3 -m http.server 9090
 
 
 # Build
