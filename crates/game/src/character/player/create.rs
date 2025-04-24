@@ -9,8 +9,7 @@ use bevy_ggrs::AddRollbackCommandExtension;
 use super::{config::{PlayerConfig, PlayerConfigHandles}, control::{get_input_map, PlayerAction}, LocalPlayer, Player};
 
 const PLAYER_SPRITESHEET_CONFIG_PATH: &str = "ZombieShooter/Sprites/Character/player_sheet.ron";
-const PLAYER_ANIMATIONS_CONFIG_PATH: &str =
-        "ZombieShooter/Sprites/Character/player_animation.ron";
+const PLAYER_ANIMATIONS_CONFIG_PATH: &str = "ZombieShooter/Sprites/Character/player_animation.ron";
 const PLAYER_CONFIG_PATH: &str = "ZombieShooter/Sprites/Character/player_config.ron";
 
 
@@ -29,8 +28,6 @@ pub fn create_player(
         asset_server.load(PLAYER_ANIMATIONS_CONFIG_PATH);
     let player_config_handle: Handle<PlayerConfig> = asset_server.load(PLAYER_CONFIG_PATH);
 
-    //let mut accessories = HashMap::new();
-    //accessories.insert("SHIRT_1".into(), sprint_sheet_shirt_1_handle.clone());
         let animation_bundle =
             AnimationBundle::new(sprite_sheet_handle.clone(), animation_handle.clone());
 
@@ -54,7 +51,7 @@ pub fn create_player(
                 input_map: get_input_map(),
             });
 
-
+            info!("Adding local player with input {}", handle);
         }
 
         entity.add_rollback();

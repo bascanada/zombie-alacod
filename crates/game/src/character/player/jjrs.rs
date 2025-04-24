@@ -1,10 +1,7 @@
 
-use bevy::prelude::*;
 use bevy_ggrs::GgrsConfig;
 use bevy_matchbox::prelude::PeerId;
-use ggrs::{Config, PlayerHandle};
 use serde::{Deserialize, Serialize};
-
 
 
 #[repr(C)]

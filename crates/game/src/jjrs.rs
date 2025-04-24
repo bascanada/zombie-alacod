@@ -5,7 +5,7 @@ use bevy_ggrs::{ggrs::PlayerType, prelude::*};
 use bevy_matchbox::{prelude::PeerState, MatchboxSocket};
 use ggrs::UdpNonBlockingSocket;
 
-use crate::character::player::{create::create_player, jjrs::{BoxConfig, PeerConfig}};
+use crate::{character::player::{create::create_player, jjrs::{BoxConfig, PeerConfig}}, plugins::AppState};
 
 pub struct GggrsConnectionConfiguration {
     pub max_player: usize,
@@ -23,7 +23,11 @@ pub struct GggrsSessionConfiguration {
     pub players: Vec<String>,
 }
 
+
+// For local connection
+
 pub fn setup_ggrs_local(
+    mut app_state: ResMut<NextState<AppState>>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     session_config: Res<GggrsSessionConfiguration>,
@@ -63,10 +67,12 @@ pub fn setup_ggrs_local(
     // Insert the GGRS session resource
     commands.insert_resource(sess);
 
+    app_state.set(AppState::InGame);
 }
 
 
 
+// For matchbox socket connection
 
 
 
@@ -75,7 +81,10 @@ pub fn start_matchbox_socket(mut commands: Commands, ggrs_config: Res<GggrsSessi
 
 }
 
-pub fn wait_for_players(mut commands: Commands, asset_server: Res<AssetServer>, mut socket: ResMut<MatchboxSocket>, ggrs_config: Res<GggrsSessionConfiguration>) {
+pub fn wait_for_players(
+    mut app_state: ResMut<NextState<AppState>>,
+    mut commands: Commands, asset_server: Res<AssetServer>, mut socket: ResMut<MatchboxSocket>, ggrs_config: Res<GggrsSessionConfiguration>
+) {
     // regularly call update_peers to update the list of connected peers
     let Ok(peer_changes) = socket.try_update_peers() else {
         warn!("socket dropped");
@@ -124,16 +133,18 @@ pub fn wait_for_players(mut commands: Commands, asset_server: Res<AssetServer>, 
         .start_p2p_session(channel)
         .expect("failed to start session");
 
+
     commands.insert_resource(bevy_ggrs::Session::P2P(ggrs_session));
 
-    println!("SESSION INSERTTD");
+    app_state.set(AppState::InGame);
 }
 
-pub fn log_ggrs_events(mut session: ResMut<Session<BoxConfig>>) {
+pub fn log_ggrs_events(mut session: ResMut<bevy_ggrs::Session<PeerConfig>>) {
     match session.as_mut() {
         Session::P2P(s) => {
+            println!("GGRS_SESSION : STATE {:?} FRAME {}", s.current_state(), s.current_frame());
             for event in s.events() {
-                info!("GGRS Event: {event:?}");
+                println!("GGRS Event: {event:?}");
             }
         }
         _ => panic!("This example focuses on p2p."),

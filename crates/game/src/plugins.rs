@@ -8,10 +8,10 @@ use animation::{AnimationState, D2AnimationPlugin};
 use bevy_ggrs::GgrsPlugin;
 
 
-use crate::{character::{movement::Velocity, player::{config::PlayerConfig, control::PlayerAction, input::{apply_friction, apply_inputs, move_characters, read_local_inputs, update_animation_state}, jjrs::BoxConfig, Player}}, frame::{increase_frame_system, FrameCount}, jjrs::{setup_ggrs_local, start_matchbox_socket, wait_for_players, GggrsSessionConfiguration}};
+use crate::{character::{movement::Velocity, player::{config::PlayerConfig, control::PlayerAction, input::{apply_friction, apply_inputs, move_characters, read_local_inputs, update_animation_state}, jjrs::BoxConfig, Player}}, frame::{increase_frame_system, FrameCount}, jjrs::{log_ggrs_events, setup_ggrs_local, start_matchbox_socket, wait_for_players, GggrsSessionConfiguration}};
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Hash, States)]
-enum AppState {
+pub enum AppState {
     #[default]
     Lobby,
     InGame,
@@ -47,10 +47,12 @@ impl Plugin for BaseZombieGamePlugin {
 
         if self.online {
             app.add_systems(Startup, start_matchbox_socket);
-            app.add_systems(Update, wait_for_players);
+            app.add_systems(Update, wait_for_players.run_if(in_state(AppState::Lobby)));
+            app.add_systems(Update, log_ggrs_events.run_if(in_state(AppState::InGame)));
         } else {
             app.add_systems(Startup, setup_ggrs_local);
         }
+
 
         app.add_systems(ReadInputs, read_local_inputs);
         app.insert_resource(FrameCount { frame: 0 });
