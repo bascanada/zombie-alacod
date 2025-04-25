@@ -1,14 +1,13 @@
-use bevy::{prelude::*, time::Time, utils::HashMap};
-use bevy_ggrs::{ggrs::PlayerType, prelude::*, GgrsSchedule};
-use leafwing_input_manager::{plugin::InputManagerPlugin, prelude::*};
-use std::hash::Hash; // Needed for GGRS state checksumming if reflecting components
+use bevy::prelude::*;
+use bevy_ggrs::{prelude::*, GgrsSchedule};
+use leafwing_input_manager::plugin::InputManagerPlugin;
+use std::hash::Hash;
 use bevy_common_assets::ron::RonAssetPlugin;
 
 use animation::{AnimationState, D2AnimationPlugin};
 use bevy_ggrs::GgrsPlugin;
 
-
-use crate::{character::{movement::Velocity, player::{config::PlayerConfig, control::PlayerAction, input::{apply_friction, apply_inputs, move_characters, read_local_inputs, update_animation_state}, jjrs::BoxConfig, Player}}, frame::{increase_frame_system, FrameCount}, jjrs::{log_ggrs_events, setup_ggrs_local, start_matchbox_socket, wait_for_players, GggrsSessionConfiguration}};
+use crate::{audio::ZAudioPlugin, character::{movement::Velocity, player::{config::PlayerConfig, control::PlayerAction, input::{apply_friction, apply_inputs, move_characters, read_local_inputs, update_animation_state}, jjrs::BoxConfig, Player}}, frame::{increase_frame_system, FrameCount}, jjrs::{log_ggrs_events, setup_ggrs_local, start_matchbox_socket, wait_for_players, GggrsSessionConfiguration}};
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Hash, States)]
 pub enum AppState {
@@ -27,6 +26,7 @@ impl BaseZombieGamePlugin {
 
 impl Plugin for BaseZombieGamePlugin {
     fn build(&self, app: &mut App) {
+        app.add_plugins(ZAudioPlugin {});
         app.add_plugins(D2AnimationPlugin);
 
         app.add_plugins((
