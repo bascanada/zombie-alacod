@@ -285,6 +285,22 @@ fn character_visuals_spawn_system(
     }
 }
 
+// PUBLIC HELPER FUNCTION
+
+
+// toggle_layer receive a parent entity and check for all child sprite entity with LayerName
+// to remove or add the layer wanted
+pub fn toggle_layer(
+    commands: &mut Commands,
+    parent_entity: Entity,
+    active_layer: &mut ActiveLayers,
+    query_sprite: &mut Query<(&mut Sprite, &LayerName)>,
+
+    layers: Vec<String>, // list of layers to toggle
+) {
+
+}
+
 // PLUGIN
 
 pub struct D2AnimationPlugin;
