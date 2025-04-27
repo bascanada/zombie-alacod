@@ -44,7 +44,8 @@ pub fn read_local_inputs(
             input.0 |= INPUT_RIGHT;
          }
 
-         if action_state.pressed(&PlayerAction::Interaction) {
+         if action_state.just_released(&PlayerAction::Interaction) {
+            println!("INTERACTION PRESSED");
             input.0 |= INPUT_INTERATION;
          }
 
@@ -55,6 +56,7 @@ pub fn read_local_inputs(
 }
 
 pub fn apply_inputs(
+    mut commands: Commands,
     inputs: Res<PlayerInputs<BoxConfig>>,
     player_configs: Res<Assets<PlayerConfig>>,
     mut query: Query<(Entity, &mut Velocity, &mut ActiveLayers, &PlayerConfigHandles, &Player), With<Rollback>>,
@@ -79,7 +81,7 @@ pub fn apply_inputs(
 
 
             if input.0 & INPUT_INTERATION != 0 {
-                toggle_layer(&mut active_layers, vec!["hat".to_string()]);
+                toggle_layer(entity.clone(), &mut commands, &mut active_layers, vec!["hair".to_string()]);
             }
 
 

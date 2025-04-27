@@ -31,18 +31,20 @@ pub struct AnimationMapConfig {
 
 // COMPONENT
 
-#[derive(Component)]
-pub struct LoadingAsset {}
+#[derive(Component, Clone)]
+pub struct LoadingAsset {
+    pub layers: HashMap<String, String>,
+    pub remove: Vec<String>
+}
 
 #[derive(Component)]
 pub struct LayerName {
     pub name: String
 }
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct ActiveLayers {
-    pub layers: HashMap<String, Option<Entity>>,
-    pub to_remove: HashMap<String, Entity>
+    pub layers: HashMap<String, String>,
 }
 
 #[derive(Component, Reflect, Default, Clone, Debug, PartialEq, Eq)]
@@ -236,20 +238,20 @@ fn character_visuals_spawn_system(
     asset_server: Res<AssetServer>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     spritesheet_configs: Res<Assets<SpriteSheetConfig>>,
-    mut query: Query<(Entity, &CharacterAnimationHandles, &mut ActiveLayers), With<LoadingAsset>>,
+    mut query: Query<(Entity, &CharacterAnimationHandles, &mut ActiveLayers, &mut LoadingAsset)>,
+
+    child_query: Query<&Children>,
+    sprite_query: Query<(Entity, &LayerName)>
 
 ) {
-    for (entity, config_handles, mut active_layers,) in query.iter_mut() {
-        let mut total_item: usize = 0;
+    for (entity, config_handles, mut active_layers, mut loading_assets) in query.iter_mut() {
+        let mut total_item: usize = loading_assets.layers.len();
         let mut loaded_count = 0;
+        let mut loaded_items = vec![];
+
         for spritesheet in config_handles.spritesheets.values() {
             if let Some(spritesheet_config) = spritesheet_configs.get(spritesheet) {
-                if let Some(layer) = active_layers.layers.get_mut(&spritesheet_config.name) {
-                    if layer.is_some() {
-                        continue;
-                    }
-                    total_item += 1;
-
+                if let Some(_) = loading_assets.layers.get(&spritesheet_config.name) {
 
                     if asset_server
                         .load_state(spritesheet)
@@ -281,21 +283,43 @@ fn character_visuals_spawn_system(
                         LayerName { name: spritesheet_config.name.clone() })).id();
 
                         commands.entity(entity).add_child(sprite);
-                        layer.insert(entity);
 
+                        loaded_items.push(spritesheet_config.name.clone());
                         loaded_count += 1;
+                        println!("spawn {}", spritesheet_config.name);
+
                     }
                 }
             }
         }
 
-        for entity in active_layers.to_remove.values() {
-            commands.entity(*entity).despawn_recursive();
+        if loaded_items.len() > 0 {
+            for key in loaded_items {
+                loading_assets.layers.remove(&key);
+            }
         }
-        active_layers.to_remove.clear();
+
+        /*
+        if loading_assets.remove.len() > 0 {
+            for layer in loading_assets.remove.iter() {
+                if let Ok(childs) = child_query.get(entity) {
+                    for child in childs.iter() {
+                        if let Ok((e, layer_name)) = sprite_query.get(*child) {
+                            if layer_name.name == *layer {
+                                println!("despawn");
+                                commands.entity(e).despawn_recursive();
+                            }
+                        }
+                    }
+                }
+            }
+            loading_assets.remove.clear();
+        }
+        */
 
 
         if loaded_count == total_item {
+            println!("remove loading assets {} {}", loaded_count, total_item);
             commands.entity(entity).remove::<LoadingAsset>();
         }
 
@@ -308,30 +332,36 @@ fn character_visuals_spawn_system(
 // toggle_layer receive a parent entity and check for all child sprite entity with LayerName
 // to remove or add the layer wanted
 pub fn toggle_layer(
+    parent_entity: Entity,
+    commands: &mut Commands,
+
     active_layers: &mut ActiveLayers,
 
     layers: Vec<String>,
 ) {
 
-    let mut to_remove = HashMap::new();
+    let mut to_remove = vec![];
+    let mut to_insert = HashMap::new();
 
     for layer in layers.iter() {
         if let Some(active_layer) = active_layers.layers.get(layer) {
-            if let Some(entity_active_layer) = active_layer {
-                to_remove.insert(layer.clone(), Some(entity_active_layer.clone()));
-            }
-            to_remove.insert(layer.clone(), None);
+            to_remove.push(layer.clone());
         } else {
-            active_layers.layers.insert(layer.clone(), None);
+            to_insert.insert(layer.clone(), String::new());
         }
     }
 
-    for (key, v) in to_remove.iter() {
+    for key in to_remove.iter() {
         active_layers.layers.remove(key);
-        if let Some(entity) = v {
-            active_layers.to_remove.insert(key.clone(), entity.clone());
-        }
     }
+    for (k, v) in to_insert.iter() {
+        active_layers.layers.insert(k.clone(), v.clone());
+    }
+
+
+    println!("spawning loading asset for inserting {:?} add removing {:?}", to_insert, to_remove);
+    commands.entity(parent_entity).insert((LoadingAsset { layers: to_insert, remove: to_remove}));
+
 }
 
 // PLUGIN

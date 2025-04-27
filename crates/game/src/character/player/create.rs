@@ -53,10 +53,12 @@ pub fn create_player(
         PlayerConfigHandles {
             config: player_config_handle.clone(),
         },
-        LoadingAsset { },
+        LoadingAsset {
+            layers: bmap!["body" => String::new()],  // will be modify by the system when the user config is loaded
+            remove: vec![],
+        },
         ActiveLayers {
-            layers: bmap!("body" => None), // will be modify by the system when the user config is loaded
-            to_remove: HashMap::new(),
+            layers: bmap!["body" => String::new()],
         },
 
         animation_bundle,
