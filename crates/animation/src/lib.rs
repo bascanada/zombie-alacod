@@ -41,7 +41,8 @@ pub struct LayerName {
 
 #[derive(Component)]
 pub struct ActiveLayers {
-    pub layers: HashMap<String, String>
+    pub layers: HashMap<String, Option<Entity>>,
+    pub to_remove: HashMap<String, Entity>
 }
 
 #[derive(Component, Reflect, Default, Clone, Debug, PartialEq, Eq)]
@@ -235,53 +236,69 @@ fn character_visuals_spawn_system(
     asset_server: Res<AssetServer>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     spritesheet_configs: Res<Assets<SpriteSheetConfig>>,
-    query: Query<(Entity, &CharacterAnimationHandles), With<LoadingAsset>>,
+    mut query: Query<(Entity, &CharacterAnimationHandles, &mut ActiveLayers), With<LoadingAsset>>,
 
 ) {
-    for (entity, config_handles) in query.iter() {
-        let total_item = config_handles.spritesheets.len();
+    for (entity, config_handles, mut active_layers,) in query.iter_mut() {
+        let mut total_item: usize = 0;
         let mut loaded_count = 0;
         for spritesheet in config_handles.spritesheets.values() {
             if let Some(spritesheet_config) = spritesheet_configs.get(spritesheet) {
-                if asset_server
-                    .load_state(spritesheet)
-                    .is_loaded()
-                {
-                    let texture_handle: Handle<Image> = asset_server.load(&spritesheet_config.path);
-                    let layout = TextureAtlasLayout::from_grid(
-                        UVec2::new(
-                            spritesheet_config.tile_size.0,
-                            spritesheet_config.tile_size.1,
-                        ), // spritesheet_config.tile_size,
-                        spritesheet_config.columns,
-                        spritesheet_config.rows,
-                        None,
-                        None,
-                    );
-                    let layout_handle = texture_atlas_layouts.add(layout);
+                if let Some(layer) = active_layers.layers.get_mut(&spritesheet_config.name) {
+                    if layer.is_some() {
+                        continue;
+                    }
+                    total_item += 1;
 
 
-                    let sprite = commands.spawn_empty().insert((Sprite {
-                        image: texture_handle.clone(),
-                        texture_atlas: Some(TextureAtlas {
-                            layout: layout_handle.clone(),
-                            index: 0,
-                        }),
-                        ..default()
-                    },
-                    Transform::from_xyz(0.0, 0.0, spritesheet_config.offset),
-                    LayerName { name: spritesheet_config.name.clone() })).id();
+                    if asset_server
+                        .load_state(spritesheet)
+                        .is_loaded() 
+                    {
+                        let texture_handle: Handle<Image> = asset_server.load(&spritesheet_config.path);
+                        let layout = TextureAtlasLayout::from_grid(
+                            UVec2::new(
+                                spritesheet_config.tile_size.0,
+                                spritesheet_config.tile_size.1,
+                            ), // spritesheet_config.tile_size,
+                            spritesheet_config.columns,
+                            spritesheet_config.rows,
+                            None,
+                            None,
+                        );
+                        let layout_handle = texture_atlas_layouts.add(layout);
 
-                    commands.entity(entity).add_child(sprite);
 
-                    loaded_count += 1;
+                        let sprite = commands.spawn_empty().insert((Sprite {
+                            image: texture_handle.clone(),
+                            texture_atlas: Some(TextureAtlas {
+                                layout: layout_handle.clone(),
+                                index: 0,
+                            }),
+                            ..default()
+                        },
+                        Transform::from_xyz(0.0, 0.0, spritesheet_config.offset),
+                        LayerName { name: spritesheet_config.name.clone() })).id();
+
+                        commands.entity(entity).add_child(sprite);
+                        layer.insert(entity);
+
+                        loaded_count += 1;
+                    }
                 }
             }
         }
 
+        for entity in active_layers.to_remove.values() {
+            commands.entity(*entity).despawn_recursive();
+        }
+        active_layers.to_remove.clear();
+
+
         if loaded_count == total_item {
             commands.entity(entity).remove::<LoadingAsset>();
         }
+
     }
 }
 
@@ -291,14 +308,30 @@ fn character_visuals_spawn_system(
 // toggle_layer receive a parent entity and check for all child sprite entity with LayerName
 // to remove or add the layer wanted
 pub fn toggle_layer(
-    commands: &mut Commands,
-    parent_entity: Entity,
-    active_layer: &mut ActiveLayers,
-    query_sprite: &mut Query<(&mut Sprite, &LayerName)>,
+    active_layers: &mut ActiveLayers,
 
-    layers: Vec<String>, // list of layers to toggle
+    layers: Vec<String>,
 ) {
 
+    let mut to_remove = HashMap::new();
+
+    for layer in layers.iter() {
+        if let Some(active_layer) = active_layers.layers.get(layer) {
+            if let Some(entity_active_layer) = active_layer {
+                to_remove.insert(layer.clone(), Some(entity_active_layer.clone()));
+            }
+            to_remove.insert(layer.clone(), None);
+        } else {
+            active_layers.layers.insert(layer.clone(), None);
+        }
+    }
+
+    for (key, v) in to_remove.iter() {
+        active_layers.layers.remove(key);
+        if let Some(entity) = v {
+            active_layers.to_remove.insert(key.clone(), entity.clone());
+        }
+    }
 }
 
 // PLUGIN

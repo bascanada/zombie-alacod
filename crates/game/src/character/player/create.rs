@@ -1,7 +1,8 @@
 
 use animation::{ActiveLayers, AnimationBundle, AnimationMapConfig, LoadingAsset, SpriteSheetConfig};
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{prelude::*, utils:: HashMap};
 use leafwing_input_manager::{prelude::ActionState, InputManagerBundle};
+use utils::bmap;
 
 use crate::character::movement::Velocity;
 
@@ -54,7 +55,8 @@ pub fn create_player(
         },
         LoadingAsset { },
         ActiveLayers {
-            layers: HashMap::new() // will be modify by the system when the user config is loaded
+            layers: bmap!("body" => None), // will be modify by the system when the user config is loaded
+            to_remove: HashMap::new(),
         },
 
         animation_bundle,

@@ -1,4 +1,5 @@
 
+use animation::{toggle_layer, ActiveLayers};
 use animation::{AnimationState, CharacterAnimationHandles};
 use bevy::{prelude::*, time::Time, utils::HashMap};
 use leafwing_input_manager::prelude::*;
@@ -17,6 +18,8 @@ const INPUT_UP: u16 = 1 << 0;
 const INPUT_DOWN: u16 = 1 << 1;
 const INPUT_LEFT: u16 = 1 << 2;
 const INPUT_RIGHT: u16 = 1 << 3;
+
+const INPUT_INTERATION: u16 = 1 << 4;
 
 pub fn read_local_inputs(
     mut commands: Commands,
@@ -41,6 +44,10 @@ pub fn read_local_inputs(
             input.0 |= INPUT_RIGHT;
          }
 
+         if action_state.pressed(&PlayerAction::Interaction) {
+            input.0 |= INPUT_INTERATION;
+         }
+
         local_inputs.insert(player.handle, input);
     }
 
@@ -50,11 +57,11 @@ pub fn read_local_inputs(
 pub fn apply_inputs(
     inputs: Res<PlayerInputs<BoxConfig>>,
     player_configs: Res<Assets<PlayerConfig>>,
-    mut query: Query<(&mut Velocity, &PlayerConfigHandles, &Player), With<Rollback>>,
+    mut query: Query<(Entity, &mut Velocity, &mut ActiveLayers, &PlayerConfigHandles, &Player), With<Rollback>>,
     time: Res<Time>, 
 ) {
 
-    for (mut velocity, config_handles, player) in query.iter_mut() {
+    for (entity, mut velocity, mut active_layers, config_handles, player) in query.iter_mut() {
         if let Some(config) = player_configs.get(&config_handles.config) {
             let (input, _input_status) = inputs[player.handle];
 
@@ -69,6 +76,13 @@ pub fn apply_inputs(
                  velocity.0 += move_delta;
                  velocity.0 = velocity.0.clamp_length_max(config.movement.max_speed);
             }
+
+
+            if input.0 & INPUT_INTERATION != 0 {
+                toggle_layer(&mut active_layers, vec!["hat".to_string()]);
+            }
+
+
         }
     }
 }

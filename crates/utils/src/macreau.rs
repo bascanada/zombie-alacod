@@ -10,3 +10,17 @@ macro_rules! map(
         }
      };
 );
+
+#[macro_export]
+macro_rules! bmap(
+    { $($key:expr => $value:expr),+ } => {
+        {
+            let mut m = ::bevy::utils::HashMap::new();
+            $(
+                m.insert($key.to_string(), $value);
+            )+
+            m
+        }
+     };
+);
+
