@@ -7,7 +7,7 @@ use bevy_common_assets::ron::RonAssetPlugin;
 use animation::{character_visuals_spawn_system, set_sprite_flip, D2AnimationPlugin};
 use bevy_ggrs::GgrsPlugin;
 
-use crate::{audio::ZAudioPlugin, character::{movement::Velocity, player::{config::PlayerConfig, control::PlayerAction, input::{apply_friction, apply_inputs, move_characters, read_local_inputs, update_animation_state}, jjrs::BoxConfig, Player}}, frame::{increase_frame_system, FrameCount}, jjrs::{log_ggrs_events, setup_ggrs_local, start_matchbox_socket, wait_for_players, GggrsSessionConfiguration}};
+use crate::{audio::ZAudioPlugin, character::{movement::Velocity, player::{config::PlayerConfig, control::PlayerAction, input::{apply_friction, apply_inputs, move_characters, read_local_inputs, update_animation_state, PointerWorldPosition}, jjrs::PeerConfig, Player}}, frame::{increase_frame_system, FrameCount}, jjrs::{log_ggrs_events, setup_ggrs_local, start_matchbox_socket, wait_for_players, GggrsSessionConfiguration}};
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Hash, States)]
 pub enum AppState {
@@ -34,11 +34,13 @@ impl Plugin for BaseZombieGamePlugin {
         ));
 
         app.add_plugins(InputManagerPlugin::<PlayerAction>::default());
+        app.init_resource::<PointerWorldPosition>();
 
         app.init_state::<AppState>();
 
         app.set_rollback_schedule_fps(60);
-        app.add_plugins(GgrsPlugin::<BoxConfig>::default())
+        app.add_plugins(GgrsPlugin::<PeerConfig>::default())
+            .rollback_resource_with_copy::<PointerWorldPosition>()
             .rollback_resource_with_copy::<FrameCount>()
             .rollback_component_with_clone::<Transform>()
             .rollback_component_with_reflect::<Velocity>()

@@ -11,9 +11,9 @@ use utils::{camera::tod::setup_camera, web::WebPlugin};
 fn character_equipment_system(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut query: Query<(Entity, &mut ActiveLayers, &mut FacingDirection)>,
+    mut query: Query<(Entity, &mut ActiveLayers)>,
 ) {
-    for (entity, mut active_layers, mut facing_direction) in query.iter_mut() {
+    for (entity, mut active_layers) in query.iter_mut() {
         // Toggle helmet layer when 'H' is pressed
         if keyboard_input.just_pressed(KeyCode::KeyH) {
             toggle_layer(
@@ -22,14 +22,6 @@ fn character_equipment_system(
                 &mut active_layers,
                 vec!["hair".to_string()],
             );
-        }
-
-        if keyboard_input.just_pressed(KeyCode::KeyJ) {
-            if *facing_direction == FacingDirection::Left {
-                *facing_direction = FacingDirection::Right;
-            } else {
-                *facing_direction = FacingDirection::Left;
-            }
         }
     }
 }

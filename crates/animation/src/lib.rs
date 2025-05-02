@@ -71,7 +71,7 @@ pub enum FacingDirection {
 
 impl Default for FacingDirection {
     fn default() -> Self {
-        FacingDirection::Left
+        FacingDirection::Right
     }
 }
 

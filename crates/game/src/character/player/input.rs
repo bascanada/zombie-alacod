@@ -1,18 +1,21 @@
 
-use animation::{toggle_layer, ActiveLayers};
+use animation::{toggle_layer, ActiveLayers, FacingDirection};
 use animation::{AnimationState, CharacterAnimationHandles};
+use bevy::window::PrimaryWindow;
 use bevy::{prelude::*, time::Time, utils::HashMap};
 use leafwing_input_manager::prelude::*;
 use bevy_ggrs::prelude::*;
 use bevy_ggrs::LocalInputs;
+use serde::{Serialize, Deserialize}; 
 
 use crate::character::movement::{MovementConfig, Velocity};
-use crate::character::player::jjrs::BoxConfig;
-use crate::character::player::{control::PlayerAction, jjrs::BoxInput, Player};
+use crate::character::player::{control::PlayerAction, Player};
 
 use super::config::PlayerConfig;
 use super::config::PlayerConfigHandles;
+use super::jjrs::PeerConfig;
 use super::LocalPlayer;
+
 
 const INPUT_UP: u16 = 1 << 0;
 const INPUT_DOWN: u16 = 1 << 1;
@@ -21,87 +24,132 @@ const INPUT_RIGHT: u16 = 1 << 3;
 
 const INPUT_INTERATION: u16 = 1 << 4;
 
+const PAN_FACING_THRESHOLD: i16 = 5;
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct BoxInput{
+    pub buttons: u16,
+    pub pan_x: i16,
+    pub pan_y: i16
+}
+
+#[derive(Resource, Default, Debug, Clone, Copy)]
+pub struct PointerWorldPosition(pub Vec2);
+
+
+fn get_facing_direction(input: &BoxInput) -> FacingDirection {
+
+    if input.pan_x > PAN_FACING_THRESHOLD {
+        FacingDirection::Right
+    } else if input.pan_x < -PAN_FACING_THRESHOLD {
+        FacingDirection::Left
+    } else {
+        if input.buttons & INPUT_RIGHT != 0 {
+            FacingDirection::Right
+        } else if input.buttons & INPUT_LEFT != 0 {
+            FacingDirection::Left
+        } else {
+            FacingDirection::Right
+        }
+    }
+}
+
 pub fn read_local_inputs(
     mut commands: Commands,
-    players: Query<(&ActionState<PlayerAction>, &Player), With<LocalPlayer>>,
+    players: Query<(&ActionState<PlayerAction>, &GlobalTransform, &Player), With<LocalPlayer>>,
+    
+    q_window: Query<&Window, With<PrimaryWindow>>,
+    q_camera: Query<(&Camera, &GlobalTransform)>,
 ) {
 
     let mut local_inputs = HashMap::new();
 
-    for (action_state, player) in players.iter() {
+    for (action_state, transform, player) in players.iter() {
         let mut input = BoxInput::default();
 
          if action_state.pressed(&PlayerAction::MoveUp) {
-            input.0 |= INPUT_UP;
+            input.buttons |= INPUT_UP;
          }
          if action_state.pressed(&PlayerAction::MoveDown) {
-            input.0 |= INPUT_DOWN;
+            input.buttons |= INPUT_DOWN;
          }
          if action_state.pressed(&PlayerAction::MoveLeft) {
-            input.0 |= INPUT_LEFT;
+            input.buttons |= INPUT_LEFT;
          }
          if action_state.pressed(&PlayerAction::MoveRight) {
-            input.0 |= INPUT_RIGHT;
+            input.buttons |= INPUT_RIGHT;
          }
 
-         if action_state.just_released(&PlayerAction::Interaction) {
-            println!("INTERACTION PRESSED");
-            input.0 |= INPUT_INTERATION;
+         if action_state.pressed(&PlayerAction::Interaction) {
+            input.buttons |= INPUT_INTERATION;
          }
+
+
+        if let Ok(window) = q_window.get_single() {
+            if let Ok((camera, camera_transform)) = q_camera.get_single() {
+                if let Some(cursor_position) = window.cursor_position() {
+                    if let Ok(world_position) = camera.viewport_to_world_2d(camera_transform, cursor_position) {
+                        let player_position = transform.translation().truncate();
+                        let pointer_distance = world_position - player_position;
+
+                        input.pan_x = pointer_distance.x.round().clamp(i16::MIN as f32, i16::MAX as f32) as i16;
+                        input.pan_y = pointer_distance.y.round().clamp(i16::MIN as f32, i16::MAX as f32) as i16;
+                    }
+                }
+            }
+        }
 
         local_inputs.insert(player.handle, input);
     }
 
-    commands.insert_resource(LocalInputs::<BoxConfig>(local_inputs));
+    commands.insert_resource(LocalInputs::<PeerConfig>(local_inputs));
 }
 
 pub fn apply_inputs(
     mut commands: Commands,
-    inputs: Res<PlayerInputs<BoxConfig>>,
+    inputs: Res<PlayerInputs<PeerConfig>>,
     player_configs: Res<Assets<PlayerConfig>>,
-    mut query: Query<(Entity, &mut Velocity, &mut ActiveLayers, &PlayerConfigHandles, &Player), With<Rollback>>,
+
+    mut query: Query<(Entity, &mut Velocity, &mut ActiveLayers, &mut FacingDirection, &PlayerConfigHandles, &Player), With<Rollback>>,
+
     time: Res<Time>, 
 ) {
 
-    for (entity, mut velocity, mut active_layers, config_handles, player) in query.iter_mut() {
+    for (entity, mut velocity, mut active_layers, mut facing_direction, config_handles, player) in query.iter_mut() {
         if let Some(config) = player_configs.get(&config_handles.config) {
             let (input, _input_status) = inputs[player.handle];
 
+
             let mut direction = Vec2::ZERO;
-            if input.0 & INPUT_UP != 0    { direction.y += 1.0; }
-            if input.0 & INPUT_DOWN != 0  { direction.y -= 1.0; }
-            if input.0 & INPUT_LEFT != 0  { direction.x -= 1.0; }
-            if input.0 & INPUT_RIGHT != 0 { direction.x += 1.0; }
+            if input.buttons & INPUT_UP != 0    { direction.y += 1.0; }
+            if input.buttons & INPUT_DOWN != 0  { direction.y -= 1.0; }
+            if input.buttons & INPUT_LEFT != 0  { direction.x -= 1.0; }
+            if input.buttons & INPUT_RIGHT != 0 { direction.x += 1.0; }
+
+            *facing_direction = get_facing_direction(&input);
+
 
             if direction != Vec2::ZERO {
                  let move_delta = direction.normalize() * config.movement.acceleration * time.delta().as_secs_f32();
                  velocity.0 += move_delta;
                  velocity.0 = velocity.0.clamp_length_max(config.movement.max_speed);
             }
-
-
-            if input.0 & INPUT_INTERATION != 0 {
-                toggle_layer(entity.clone(), &mut commands, &mut active_layers, vec!["hair".to_string()]);
-            }
-
-
         }
     }
 }
 
 pub fn apply_friction(
-    inputs: Res<PlayerInputs<BoxConfig>>,
+    inputs: Res<PlayerInputs<PeerConfig>>,
     movement_configs: Res<Assets<PlayerConfig>>,
     mut query: Query<(&mut Velocity, &PlayerConfigHandles, &Player), With<Rollback>>,
     time: Res<Time>,
 ) {
-
-
     for (mut velocity, config_handles, player) in query.iter_mut() {
         if let Some(config) = movement_configs.get(&config_handles.config) {
             let (input, _input_status) = inputs[player.handle];
 
-            let moving = input.0 & INPUT_RIGHT != 0 || input.0 & INPUT_LEFT != 0 || input.0 & INPUT_UP != 0 || input.0 & INPUT_DOWN != 0;
+            let moving = input.buttons & INPUT_RIGHT != 0 || input.buttons & INPUT_LEFT != 0 || input.buttons & INPUT_UP != 0 || input.buttons & INPUT_DOWN != 0;
 
             if !moving && velocity.length_squared() > 0.1 {
                 velocity.0 *= (1.0 - config.movement.friction * time.delta().as_secs_f32()).max(0.0);

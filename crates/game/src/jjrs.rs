@@ -5,7 +5,7 @@ use bevy_ggrs::{ggrs::PlayerType, prelude::*};
 use bevy_matchbox::{prelude::PeerState, MatchboxSocket};
 use ggrs::UdpNonBlockingSocket;
 
-use crate::{character::player::{create::create_player, jjrs::{BoxConfig, PeerConfig}}, plugins::AppState};
+use crate::{character::player::{create::create_player, jjrs::{PeerConfig}}, plugins::AppState};
 
 pub struct GggrsConnectionConfiguration {
     pub max_player: usize,
@@ -32,7 +32,7 @@ pub fn setup_ggrs_local(
     asset_server: Res<AssetServer>,
     session_config: Res<GggrsSessionConfiguration>,
 ) {
-    let mut sess_build = SessionBuilder::<BoxConfig>::new()
+    let mut sess_build = SessionBuilder::<PeerConfig>::new()
         .with_num_players(session_config.connection.max_player)
         .with_desync_detection_mode(ggrs::DesyncDetection::On { interval: session_config.connection.desync_interval })
         .with_input_delay(session_config.connection.input_delay);
@@ -45,7 +45,7 @@ pub fn setup_ggrs_local(
                 .expect("Failed to add player");
         } else {
             let remote_addr: SocketAddr = addr.parse().unwrap();
-            sess_build = sess_build.add_player(PlayerType::Remote(remote_addr), i).expect("Failed to add player");
+            //sess_build = sess_build.add_player(PlayerType::Remote(remote_addr), i).expect("Failed to add player");
         }
         create_player(&mut commands, &asset_server, local, i);
     }
@@ -59,9 +59,10 @@ pub fn setup_ggrs_local(
         Session::SyncTest(sess)
     } else {
         let socket = UdpNonBlockingSocket::bind_to_port(session_config.connection.udp_port).expect(format!("Failed to bind udp to {}", session_config.connection.udp_port).as_str());
-        let sess = sess_build.start_p2p_session(socket).expect("failed to start p2p session");
+        panic!("");
+        //let sess = sess_build.start_p2p_session(socket).expect("failed to start p2p session");
 
-        Session::P2P(sess)
+        //Session::P2P(sess)
     };
 
     // Insert the GGRS session resource
@@ -142,7 +143,7 @@ pub fn wait_for_players(
 pub fn log_ggrs_events(mut session: ResMut<bevy_ggrs::Session<PeerConfig>>) {
     match session.as_mut() {
         Session::P2P(s) => {
-            println!("GGRS_SESSION : STATE {:?} FRAME {}", s.current_state(), s.current_frame());
+            //println!("GGRS_SESSION : STATE {:?} FRAME {}", s.current_state(), s.current_frame());
             for event in s.events() {
                 println!("GGRS Event: {event:?}");
             }
