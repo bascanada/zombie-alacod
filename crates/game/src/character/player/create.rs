@@ -41,7 +41,7 @@ pub fn create_player(
     map_layers.insert("hair".to_string(), sprite_sheet_hair_handle);
 
     let animation_bundle =
-        AnimationBundle::new(map_layers, animation_handle.clone());
+        AnimationBundle::new(map_layers, animation_handle.clone(), bmap!("body" => String::new()));
 
     let mut entity = commands.spawn((
         Transform::from_scale(Vec3::splat(6.0)).with_translation(Vec3::new(-50.0 * handle as f32, 0.0, 0.0)),
@@ -53,14 +53,6 @@ pub fn create_player(
         PlayerConfigHandles {
             config: player_config_handle.clone(),
         },
-        LoadingAsset {
-            layers: bmap!["body" => String::new()],  // will be modify by the system when the user config is loaded
-            remove: vec![],
-        },
-        ActiveLayers {
-            layers: bmap!["body" => String::new()],
-        },
-
         animation_bundle,
     ));
 

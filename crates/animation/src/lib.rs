@@ -1,4 +1,5 @@
 use bevy::{prelude::*, reflect::TypePath, utils::HashMap};
+use bevy_ggrs::{prelude::*, GgrsSchedule};
 use bevy_common_assets::ron::RonAssetPlugin;
 use serde::Deserialize;
 
@@ -14,7 +15,6 @@ pub struct SpriteSheetConfig {
     pub name: String,
     pub offset: f32,
 }
-
 
 // -- Animation Definition Configuration --
 #[derive(Deserialize, Debug, Clone)]
@@ -34,7 +34,7 @@ pub struct AnimationMapConfig {
 #[derive(Component, Clone)]
 pub struct LoadingAsset {
     pub layers: HashMap<String, String>,
-    pub remove: Vec<String>
+    pub remove: Vec<String>,
 }
 
 #[derive(Component)]
@@ -63,6 +63,18 @@ struct AnimationTimer {
     frame_timer: Timer,
 }
 
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FacingDirection {
+    Left,
+    Right,
+}
+
+impl Default for FacingDirection {
+    fn default() -> Self {
+        FacingDirection::Left
+    }
+}
+
 // Bundle
 
 #[derive(Bundle)]
@@ -70,12 +82,17 @@ pub struct AnimationBundle {
     state: AnimationState,
     handles: CharacterAnimationHandles,
     timer: AnimationTimer,
+    active_layers: ActiveLayers,
+    loading_asset: LoadingAsset,
+    facing_direction: FacingDirection,
 }
 
 impl AnimationBundle {
     pub fn new(
         spritesheets: HashMap<String, Handle<SpriteSheetConfig>>,
         animations: Handle<AnimationMapConfig>,
+
+        starting_layers: HashMap<String, String>,
     ) -> Self {
         Self {
             state: AnimationState("Idle".into()),
@@ -86,14 +103,26 @@ impl AnimationBundle {
                 spritesheets,
                 animations,
             },
+            loading_asset: LoadingAsset {
+                layers: starting_layers,
+                remove: vec![],
+            },
+            active_layers: ActiveLayers {
+                layers: HashMap::new(),
+            },
+            facing_direction: FacingDirection::default()
         }
     }
 }
 
-// Animates sprite based on AnimationState (visual, non-deterministic part) (mostly unchanged)
-// Needs to query With<Rollback>
+
+
+
+
+
+// Animates sprite based on AnimationState
 fn animate_sprite_system(
-    time: Res<Time>, // Use Bevy's normal time for visual animation speed
+    time: Res<Time>,
     animation_configs: Res<Assets<AnimationMapConfig>>,
     mut query: Query<(
         &Children,
@@ -101,10 +130,9 @@ fn animate_sprite_system(
         &mut AnimationTimer,
         &AnimationState,
     ), Without<LoadingAsset>>,
-
     mut query_sprites: Query<&mut Sprite, With<LayerName>>,
 ) {
-    for (childs,  config_handles, mut timer, state) in query.iter_mut() {
+    for (childs, config_handles, mut timer, state) in query.iter_mut() {
         if let Some(anim_config) = animation_configs.get(&config_handles.animations) {
             timer.frame_timer.tick(time.delta());
             if timer.frame_timer.just_finished() {
@@ -135,8 +163,7 @@ fn animate_sprite_system(
     }
 }
 
-// Updates animation timer duration if AnimationMapConfig reloads (mostly unchanged)
-// Needs to query With<Rollback>
+// Updates animation timer duration if AnimationMapConfig reloads
 fn check_animation_config_reload_system(
     mut ev_asset: EventReader<AssetEvent<AnimationMapConfig>>,
     animation_configs: Res<Assets<AnimationMapConfig>>,
@@ -166,7 +193,7 @@ fn check_animation_config_reload_system(
             anim_timer.frame_timer.reset();
         }
         // Apply initial duration after startup load (if needed)
-        else if anim_timer.frame_timer.duration().as_secs_f32() == 0.1 {
+        else if anim_timer.frame_timer.duration().as_secs_f32() == 1.0 {
             // Check default
             if asset_server
                 .load_state(&config_handles.animations)
@@ -188,11 +215,7 @@ fn character_visuals_update_system(
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     spritesheet_configs: Res<Assets<SpriteSheetConfig>>,
     mut ev_asset: EventReader<AssetEvent<SpriteSheetConfig>>,
-
-    query: Query<
-        (&Children, Entity, &CharacterAnimationHandles), // <-- Query TextureAtlasSprite
-    >,
-
+    query: Query<(&Children, Entity, &CharacterAnimationHandles)>,
     mut query_sprite: Query<(&mut Sprite, &LayerName)>,
 ) {
     for event in ev_asset.read() {
@@ -203,7 +226,7 @@ fn character_visuals_update_system(
                     if handle.id() == *id {
                         if let Some(new_config) = spritesheet_configs.get(handle) {
                             info!(
-                                "Spritesheet config modified for GGRS entity {:?}, updating visuals.",
+                                "Spritesheet config modified for entity {:?}, updating visuals.",
                                 entity
                             );
                             let new_layout = TextureAtlasLayout::from_grid(
@@ -233,36 +256,59 @@ fn character_visuals_update_system(
     }
 }
 
-fn character_visuals_spawn_system(
+
+// SYSTEM THAT RUN ON THE BEVY SCHEDULE FOR SYNCH
+
+pub fn character_visuals_spawn_system(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     spritesheet_configs: Res<Assets<SpriteSheetConfig>>,
-    mut query: Query<(Entity, &CharacterAnimationHandles, &mut ActiveLayers, &mut LoadingAsset)>,
-
+    animation_configs: Res<Assets<AnimationMapConfig>>,
+    mut query: Query<(Entity, &CharacterAnimationHandles, &mut ActiveLayers, &mut LoadingAsset, &AnimationState), With<Rollback>>,
     child_query: Query<&Children>,
-    sprite_query: Query<(Entity, &LayerName)>
-
+    sprite_query: Query<(Entity, &LayerName, &Sprite)>,
 ) {
-    for (entity, config_handles, mut active_layers, mut loading_assets) in query.iter_mut() {
-        let mut total_item: usize = loading_assets.layers.len();
-        let mut loaded_count = 0;
+    for (entity, config_handles, mut active_layers, mut loading_assets, anim_state) in query.iter_mut() {
+        let total_items = loading_assets.layers.len() + loading_assets.remove.len();
+        let mut processed_count = 0;
         let mut loaded_items = vec![];
 
+
+        let mut current_frame_index = 0;
+        
+        // Try to determine the current animation frame from existing sprites
+        if let Ok(children) = child_query.get(entity) {
+            for child in children.iter() {
+                if let Ok((_, _, sprite)) = sprite_query.get(*child) {
+                    if let Some(atlas) = &sprite.texture_atlas {
+                        current_frame_index = atlas.index;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // If we couldn't find existing sprites, try to determine from animation config
+        if current_frame_index == 0 && anim_state.0 != "Idle" {
+            if let Some(anim_config) = animation_configs.get(&config_handles.animations) {
+                if let Some(indices) = anim_config.animations.get(&anim_state.0) {
+                    current_frame_index = indices.start;
+                }
+            }
+        }
+
+        // Handle layer additions
         for spritesheet in config_handles.spritesheets.values() {
             if let Some(spritesheet_config) = spritesheet_configs.get(spritesheet) {
                 if let Some(_) = loading_assets.layers.get(&spritesheet_config.name) {
-
-                    if asset_server
-                        .load_state(spritesheet)
-                        .is_loaded() 
-                    {
+                    if asset_server.load_state(spritesheet).is_loaded() {
                         let texture_handle: Handle<Image> = asset_server.load(&spritesheet_config.path);
                         let layout = TextureAtlasLayout::from_grid(
                             UVec2::new(
                                 spritesheet_config.tile_size.0,
                                 spritesheet_config.tile_size.1,
-                            ), // spritesheet_config.tile_size,
+                            ),
                             spritesheet_config.columns,
                             spritesheet_config.rows,
                             None,
@@ -270,98 +316,207 @@ fn character_visuals_spawn_system(
                         );
                         let layout_handle = texture_atlas_layouts.add(layout);
 
-
-                        let sprite = commands.spawn_empty().insert((Sprite {
-                            image: texture_handle.clone(),
-                            texture_atlas: Some(TextureAtlas {
-                                layout: layout_handle.clone(),
-                                index: 0,
-                            }),
-                            ..default()
-                        },
-                        Transform::from_xyz(0.0, 0.0, spritesheet_config.offset),
-                        LayerName { name: spritesheet_config.name.clone() })).id();
+                        let sprite = commands.spawn((
+                            Sprite {
+                                image: texture_handle.clone(),
+                                texture_atlas: Some(TextureAtlas {
+                                    layout: layout_handle.clone(),
+                                    index: current_frame_index,
+                                }),
+                                ..default()
+                            },
+                            Transform::from_xyz(0.0, 0.0, spritesheet_config.offset),
+                            LayerName { name: spritesheet_config.name.clone() },
+                        )).id();
 
                         commands.entity(entity).add_child(sprite);
 
+                        // Add to active layers with empty string value (or you could store meaningful metadata here)
+                        active_layers.layers.insert(spritesheet_config.name.clone(), String::new());
+                        
                         loaded_items.push(spritesheet_config.name.clone());
-                        loaded_count += 1;
-                        println!("spawn {}", spritesheet_config.name);
-
+                        processed_count += 1;
+                        info!("Spawned layer: {}", spritesheet_config.name);
                     }
                 }
             }
         }
 
-        if loaded_items.len() > 0 {
-            for key in loaded_items {
-                loading_assets.layers.remove(&key);
-            }
+        // Remove processed items from loading queue
+        for key in loaded_items {
+            loading_assets.layers.remove(&key);
         }
 
-        /*
-        if loading_assets.remove.len() > 0 {
-            for layer in loading_assets.remove.iter() {
-                if let Ok(childs) = child_query.get(entity) {
-                    for child in childs.iter() {
-                        if let Ok((e, layer_name)) = sprite_query.get(*child) {
-                            if layer_name.name == *layer {
-                                println!("despawn");
-                                commands.entity(e).despawn_recursive();
-                            }
+        // Handle layer removals
+        if !loading_assets.remove.is_empty() {
+            if let Ok(children) = child_query.get(entity) {
+                let mut to_despawn = Vec::new();
+                
+                for child in children.iter() {
+                    if let Ok((child_entity, layer_name, _)) = sprite_query.get(*child) {
+                        if loading_assets.remove.contains(&layer_name.name) {
+                            to_despawn.push(child_entity);
+                            active_layers.layers.remove(&layer_name.name);
+                            processed_count += 1;
+                            info!("Despawned layer: {}", layer_name.name);
                         }
                     }
                 }
+                
+                // Despawn in a separate loop to avoid borrowing issues
+                for child_entity in to_despawn {
+                    commands.entity(child_entity).despawn_recursive();
+                }
             }
+            
+            // Clear the removal list
             loading_assets.remove.clear();
         }
-        */
 
-
-        if loaded_count == total_item {
-            println!("remove loading assets {} {}", loaded_count, total_item);
+        // Remove the LoadingAsset component if all operations are complete
+        if processed_count == total_items {
+            info!("All layer operations completed. Processed {} items.", processed_count);
             commands.entity(entity).remove::<LoadingAsset>();
         }
-
     }
 }
 
-// PUBLIC HELPER FUNCTION
+pub fn set_sprite_flip(
+    query: Query<(&Children, &FacingDirection), With<Rollback>>,
+    mut sprite_query: Query<(&mut Sprite)>,
+) {
+    for (childrens, direction) in query.iter() {
+        for child in childrens.iter() {
+            if let Ok(mut sprite) = sprite_query.get_mut(*child) {
+                match direction {
+                    FacingDirection::Left => {
+                        sprite.flip_x = true;
+                    }
+                    FacingDirection::Right => {
+                        sprite.flip_x = false;
+                    }
+                }
+            }
+        }
+    }
+}
 
+// PUBLIC HELPER FUNCTIONS
 
-// toggle_layer receive a parent entity and check for all child sprite entity with LayerName
-// to remove or add the layer wanted
+/// Toggles the specified layers on or off for the given entity.
+/// If a layer is currently active, it will be removed.
+/// If a layer is not active, it will be added.
 pub fn toggle_layer(
     parent_entity: Entity,
     commands: &mut Commands,
-
     active_layers: &mut ActiveLayers,
-
     layers: Vec<String>,
 ) {
-
     let mut to_remove = vec![];
     let mut to_insert = HashMap::new();
 
     for layer in layers.iter() {
-        if let Some(active_layer) = active_layers.layers.get(layer) {
+        if active_layers.layers.contains_key(layer) {
             to_remove.push(layer.clone());
         } else {
             to_insert.insert(layer.clone(), String::new());
         }
     }
 
-    for key in to_remove.iter() {
-        active_layers.layers.remove(key);
+    // Only proceed if there are actual changes to make
+    if !to_remove.is_empty() || !to_insert.is_empty() {
+        info!(
+            "Layer toggle operation: adding {:?}, removing {:?}",
+            to_insert.keys().collect::<Vec<_>>(),
+            to_remove
+        );
+        
+        commands.entity(parent_entity).insert(LoadingAsset {
+            layers: to_insert,
+            remove: to_remove,
+        });
     }
-    for (k, v) in to_insert.iter() {
-        active_layers.layers.insert(k.clone(), v.clone());
+}
+
+/// Adds the specified layers to the entity if they aren't already active
+pub fn add_layers(
+    parent_entity: Entity,
+    commands: &mut Commands,
+    active_layers: &ActiveLayers,
+    layers: Vec<String>,
+) {
+    let mut to_insert = HashMap::new();
+
+    for layer in layers.iter() {
+        if !active_layers.layers.contains_key(layer) {
+            to_insert.insert(layer.clone(), String::new());
+        }
     }
 
+    if !to_insert.is_empty() {
+        info!("Adding layers: {:?}", to_insert.keys().collect::<Vec<_>>());
+        commands.entity(parent_entity).insert(LoadingAsset {
+            layers: to_insert,
+            remove: vec![],
+        });
+    }
+}
 
-    println!("spawning loading asset for inserting {:?} add removing {:?}", to_insert, to_remove);
-    commands.entity(parent_entity).insert((LoadingAsset { layers: to_insert, remove: to_remove}));
+/// Removes the specified layers from the entity if they are active
+pub fn remove_layers(
+    parent_entity: Entity,
+    commands: &mut Commands,
+    active_layers: &ActiveLayers,
+    layers: Vec<String>,
+) {
+    let mut to_remove = vec![];
 
+    for layer in layers.iter() {
+        if active_layers.layers.contains_key(layer) {
+            to_remove.push(layer.clone());
+        }
+    }
+
+    if !to_remove.is_empty() {
+        info!("Removing layers: {:?}", to_remove);
+        commands.entity(parent_entity).insert(LoadingAsset {
+            layers: HashMap::new(),
+            remove: to_remove,
+        });
+    }
+}
+
+/// Replaces one layer with another
+pub fn replace_layer(
+    parent_entity: Entity,
+    commands: &mut Commands,
+    active_layers: &ActiveLayers,
+    old_layer: String,
+    new_layer: String,
+) {
+    let mut to_remove = vec![];
+    let mut to_insert = HashMap::new();
+
+    if active_layers.layers.contains_key(&old_layer) {
+        to_remove.push(old_layer);
+    }
+    
+    if !active_layers.layers.contains_key(&new_layer) {
+        to_insert.insert(new_layer, String::new());
+    }
+
+    if !to_remove.is_empty() || !to_insert.is_empty() {
+        info!(
+            "Replacing layer: {:?} with {:?}",
+            to_remove,
+            to_insert.keys().collect::<Vec<_>>()
+        );
+        
+        commands.entity(parent_entity).insert(LoadingAsset {
+            layers: to_insert,
+            remove: to_remove,
+        });
+    }
 }
 
 // PLUGIN
@@ -372,12 +527,15 @@ impl Plugin for D2AnimationPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(RonAssetPlugin::<SpriteSheetConfig>::new(&["ron"]));
         app.add_plugins(RonAssetPlugin::<AnimationMapConfig>::new(&["ron"]));
+        
+        app
+            .rollback_component_with_reflect::<AnimationState>()
+            .rollback_component_with_clone::<ActiveLayers>();
 
         app.add_systems(
             Update,
             (
-                character_visuals_spawn_system,
-                character_visuals_update_system.after(character_visuals_spawn_system),
+                character_visuals_update_system,
                 animate_sprite_system,
                 check_animation_config_reload_system.after(animate_sprite_system),
             ),

@@ -4,7 +4,7 @@ use leafwing_input_manager::plugin::InputManagerPlugin;
 use std::hash::Hash;
 use bevy_common_assets::ron::RonAssetPlugin;
 
-use animation::{ActiveLayers, AnimationState, D2AnimationPlugin, LoadingAsset};
+use animation::{character_visuals_spawn_system, set_sprite_flip, D2AnimationPlugin};
 use bevy_ggrs::GgrsPlugin;
 
 use crate::{audio::ZAudioPlugin, character::{movement::Velocity, player::{config::PlayerConfig, control::PlayerAction, input::{apply_friction, apply_inputs, move_characters, read_local_inputs, update_animation_state}, jjrs::BoxConfig, Player}}, frame::{increase_frame_system, FrameCount}, jjrs::{log_ggrs_events, setup_ggrs_local, start_matchbox_socket, wait_for_players, GggrsSessionConfiguration}};
@@ -40,11 +40,8 @@ impl Plugin for BaseZombieGamePlugin {
         app.set_rollback_schedule_fps(60);
         app.add_plugins(GgrsPlugin::<BoxConfig>::default())
             .rollback_resource_with_copy::<FrameCount>()
-            .rollback_component_with_clone::<ActiveLayers>()
-            .rollback_component_with_clone::<LoadingAsset>()
             .rollback_component_with_clone::<Transform>()
             .rollback_component_with_reflect::<Velocity>()
-            .rollback_component_with_reflect::<AnimationState>()
             .rollback_component_with_reflect::<Player>();
 
         if self.online {
@@ -61,7 +58,11 @@ impl Plugin for BaseZombieGamePlugin {
         app.add_systems(
             GgrsSchedule, (
                 apply_inputs,
-                apply_friction.after(apply_inputs),
+                // ANIMATION CRATE
+                character_visuals_spawn_system.after(apply_inputs),
+                set_sprite_flip.after(character_visuals_spawn_system),
+                // ....
+                apply_friction.after(set_sprite_flip),
                 move_characters.after(apply_friction),
                 update_animation_state.after(move_characters),
                 increase_frame_system.after(update_animation_state)
