@@ -97,7 +97,7 @@ host_website:
 
 # Build
 
-docker_matchbox_server:
+build_docker_matchbox_server:
 	docker build -f ./crates/matchbox_server/Dockerfile ./crates/matchbox_server/ -t ghcr.io/bascanada/matchbox_server:latest
 
 build_map_preview_web:
