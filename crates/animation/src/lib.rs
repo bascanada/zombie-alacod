@@ -16,6 +16,10 @@ pub struct SpriteSheetConfig {
     pub offset: f32,
 }
 
+
+pub struct SkinConfig(pub HashMap<String, String>);
+
+
 // -- Animation Definition Configuration --
 #[derive(Deserialize, Debug, Clone)]
 pub struct AnimationIndices {
@@ -31,7 +35,8 @@ pub struct AnimationMapConfig {
 
 // COMPONENT
 
-#[derive(Component, Clone)]
+#[derive(Component, Reflect, Default, Clone, Debug, PartialEq, Eq)]
+#[reflect(Component, PartialEq)] // Reflect needed for GGRS state hashing
 pub struct LoadingAsset {
     pub layers: HashMap<String, String>,
     pub remove: Vec<String>,
@@ -45,6 +50,17 @@ pub struct LayerName {
 #[derive(Component, Clone)]
 pub struct ActiveLayers {
     pub layers: HashMap<String, String>,
+}
+
+
+#[derive(Component, Clone)]
+pub struct Skin {
+    pub current: String,
+}
+
+#[derive(Component)]
+pub struct ShadowSkin {
+    pub current: String,
 }
 
 #[derive(Component, Reflect, Default, Clone, Debug, PartialEq, Eq)]
@@ -270,6 +286,7 @@ pub fn character_visuals_spawn_system(
     sprite_query: Query<(Entity, &LayerName, &Sprite)>,
 ) {
     for (entity, config_handles, mut active_layers, mut loading_assets, anim_state) in query.iter_mut() {
+        println!("I HAVE LOADING ASSET");
         let total_items = loading_assets.layers.len() + loading_assets.remove.len();
         let mut processed_count = 0;
         let mut loaded_items = vec![];
@@ -401,7 +418,26 @@ pub fn set_sprite_flip(
     }
 }
 
+pub fn watch_change_skin(
+    mut query_skin: Query<(&Skin, &mut ShadowSkin)>
+) {
+    for (skin, mut shadow) in query_skin.iter_mut() {
+        if skin.current != shadow.current {
+            shadow.current = skin.current.clone();
+            println!("skin is updated");
+        }
+    }
+}
+
 // PUBLIC HELPER FUNCTIONS
+
+pub fn change_skin(
+    skin: &mut Skin,
+    
+    skin_name: String,
+) {
+    skin.current = skin_name;
+}
 
 /// Toggles the specified layers on or off for the given entity.
 /// If a layer is currently active, it will be removed.
@@ -530,15 +566,17 @@ impl Plugin for D2AnimationPlugin {
         
         app
             .rollback_component_with_reflect::<AnimationState>()
+            .rollback_component_with_clone::<Skin>()
             .rollback_component_with_clone::<ActiveLayers>();
 
         app.add_systems(
             Update,
             (
-                character_visuals_update_system,
-                animate_sprite_system,
+                watch_change_skin,
+                character_visuals_update_system.after(watch_change_skin),
+                animate_sprite_system.after(character_visuals_update_system),
                 check_animation_config_reload_system.after(animate_sprite_system),
-            ),
+            )
         );
     }
 }

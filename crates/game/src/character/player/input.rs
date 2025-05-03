@@ -1,5 +1,5 @@
 
-use animation::{toggle_layer, ActiveLayers, FacingDirection};
+use animation::{toggle_layer, ActiveLayers, FacingDirection, Skin};
 use animation::{AnimationState, CharacterAnimationHandles};
 use bevy::window::PrimaryWindow;
 use bevy::{prelude::*, time::Time, utils::HashMap};
@@ -111,12 +111,12 @@ pub fn apply_inputs(
     inputs: Res<PlayerInputs<PeerConfig>>,
     player_configs: Res<Assets<PlayerConfig>>,
 
-    mut query: Query<(Entity, &mut Velocity, &mut ActiveLayers, &mut FacingDirection, &PlayerConfigHandles, &Player), With<Rollback>>,
+    mut query: Query<(Entity, &mut Velocity, &mut ActiveLayers, &mut FacingDirection, &mut Skin, &PlayerConfigHandles, &Player), With<Rollback>>,
 
     time: Res<Time>, 
 ) {
 
-    for (entity, mut velocity, mut active_layers, mut facing_direction, config_handles, player) in query.iter_mut() {
+    for (entity, mut velocity, mut active_layers, mut facing_direction, mut skin, config_handles, player) in query.iter_mut() {
         if let Some(config) = player_configs.get(&config_handles.config) {
             let (input, _input_status) = inputs[player.handle];
 
@@ -128,7 +128,6 @@ pub fn apply_inputs(
             if input.buttons & INPUT_RIGHT != 0 { direction.x += 1.0; }
 
             *facing_direction = get_facing_direction(&input);
-
 
             if direction != Vec2::ZERO {
                  let move_delta = direction.normalize() * config.movement.acceleration * time.delta().as_secs_f32();

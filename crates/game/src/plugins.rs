@@ -60,13 +60,14 @@ impl Plugin for BaseZombieGamePlugin {
         app.add_systems(
             GgrsSchedule, (
                 apply_inputs,
-                // ANIMATION CRATE
-                character_visuals_spawn_system.after(apply_inputs),
-                set_sprite_flip.after(character_visuals_spawn_system),
                 // ....
-                apply_friction.after(set_sprite_flip),
+                apply_friction.after(apply_inputs),
                 move_characters.after(apply_friction),
-                update_animation_state.after(move_characters),
+                // ANIMATION CRATE
+                character_visuals_spawn_system.after(move_characters),
+                set_sprite_flip.after(character_visuals_spawn_system),
+                // ...
+                update_animation_state.after(set_sprite_flip),
                 increase_frame_system.after(update_animation_state)
             ));
     }

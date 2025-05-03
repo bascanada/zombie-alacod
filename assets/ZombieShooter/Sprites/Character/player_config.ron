@@ -5,5 +5,11 @@
         friction: 10.0
     ),
 
-    default_layers: [ "body" ]
+    default_skin: "default",
+
+
+    skins: {
+        "default": ["body"],
+        "simple_guy": ["body", "hair_1"]
+    }
 )

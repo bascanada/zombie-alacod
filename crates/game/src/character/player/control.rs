@@ -29,7 +29,7 @@ pub fn get_input_map() -> InputMap<PlayerAction> {
         (PlayerAction::MoveLeft, KeyCode::ArrowLeft),
         (PlayerAction::MoveRight, KeyCode::KeyD),
         (PlayerAction::MoveRight, KeyCode::ArrowRight),
-        (PlayerAction::Interaction, KeyCode::KeyF)
+        (PlayerAction::Interaction, KeyCode::KeyH)
     ]);
     // Add gamepad support if needed
     map.insert(PlayerAction::MoveUp, GamepadButton::DPadUp);
