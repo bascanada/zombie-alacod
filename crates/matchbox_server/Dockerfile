@@ -8,10 +8,8 @@ FROM rust:1.86-slim-bullseye AS builder
 WORKDIR /usr/src/matchbox_server/
 
 COPY README.md /usr/src/README.md
-COPY matchbox_server/Cargo.toml /usr/src/matchbox_server/Cargo.toml
-COPY matchbox_protocol /usr/src/matchbox_protocol
-COPY matchbox_server /usr/src/matchbox_server
-COPY matchbox_signaling /usr/src/matchbox_signaling
+COPY ./Cargo.toml /usr/src/matchbox_server/Cargo.toml
+COPY ./src /usr/src/matchbox_server/src
 
 RUN cargo build --release
 

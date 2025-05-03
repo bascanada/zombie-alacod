@@ -89,13 +89,16 @@ character_tester_matchbox_2:
 
 
 matchbox_server:
-	matchbox_server
+	cargo run -p matchbox_server
 
 host_website:
 	cd website && python3 -m http.server 9090
 
 
 # Build
+
+docker_matchbox_server:
+	docker build -f ./crates/matchbox_server/Dockerfile ./crates/matchbox_server/ -t ghcr.io/bascanada/matchbox_server:latest
 
 build_map_preview_web:
 	cargo build --example map_preview --target wasm32-unknown-unknown --features bevy_ecs_tilemap/atlas $(RELEASE)
@@ -108,4 +111,9 @@ build_character_tester_web:
 
 build_website: build_map_preview_web build_character_tester_web
 	cp -r ./assets ./website/
+
+
+# Publish
+push_docker_matchbox_server:
+	docker push ghcr.io/bascanada/matchbox_server:latest
 
