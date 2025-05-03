@@ -29,7 +29,7 @@ fn character_equipment_system(
 
 fn main() {
     
-    let (local_port,mut nbr_player, players, _, matchbox) = get_args();
+    let (local_port,mut nbr_player, players, _, matchbox, lobby) = get_args();
 
     if nbr_player == 0 { nbr_player = players.len() }
 
@@ -55,7 +55,7 @@ fn main() {
         .add_plugins(WebPlugin{})
         .add_plugins(FrameDebugUIPlugin)
         .add_plugins(BaseZombieGamePlugin::new(matchbox != ""))
-        .insert_resource(GggrsSessionConfiguration { matchbox: matchbox != "", matchbox_url: matchbox.clone(), connection: GggrsConnectionConfiguration { input_delay: 5, max_player: nbr_player, desync_interval: 10, socket: players.len() > 1, udp_port: local_port}, players: players })
+        .insert_resource(GggrsSessionConfiguration { matchbox: matchbox != "", lobby: lobby.clone(), matchbox_url: matchbox.clone(), connection: GggrsConnectionConfiguration { input_delay: 5, max_player: nbr_player, desync_interval: 10, socket: players.len() > 1, udp_port: local_port}, players: players })
         .add_systems(Startup, setup_camera)
         .add_systems(Update, character_equipment_system)
         .run();

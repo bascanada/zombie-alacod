@@ -19,6 +19,7 @@ pub struct GggrsConnectionConfiguration {
 pub struct GggrsSessionConfiguration {
     pub matchbox: bool,
     pub matchbox_url: String,
+    pub lobby: String,
     pub connection: GggrsConnectionConfiguration,
     pub players: Vec<String>,
 }
@@ -76,9 +77,9 @@ pub fn setup_ggrs_local(
 // For matchbox socket connection
 
 
-
 pub fn start_matchbox_socket(mut commands: Commands, ggrs_config: Res<GggrsSessionConfiguration>) {
-    commands.insert_resource(MatchboxSocket::new_unreliable(ggrs_config.matchbox_url.clone()));
+    let url = format!("{}/{}?next={}", ggrs_config.matchbox_url, ggrs_config.lobby, ggrs_config.connection.max_player);
+    commands.insert_resource(MatchboxSocket::new_unreliable(url));
 
 }
 

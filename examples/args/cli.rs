@@ -7,6 +7,8 @@ use clap::Parser;
 pub struct Opt {
     #[clap(short, long,)]
     pub matchbox: Option<String>,
+    #[clap(long,)]
+    pub lobby: Option<String>,
     #[clap(short, long)]
     pub number_player: Option<usize>,
     #[clap(short, long)]
