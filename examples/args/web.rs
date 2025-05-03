@@ -5,6 +5,7 @@ use wasm_bindgen::JsCast; // For safe casting
 pub struct CanvasConfig {
     pub number_player: Option<usize>,
     pub matchbox: Option<String>,
+    pub lobby: Option<String>,
 }
 
 pub fn read_canvas_data_system() -> CanvasConfig {
@@ -20,6 +21,7 @@ pub fn read_canvas_data_system() -> CanvasConfig {
         .expect("should have #bevy-canvas element in the DOM");
 
     config.matchbox = canvas_element.get_attribute("data-matchbox");
+    config.lobby = canvas_element.get_attribute("data-lobby");
 
     if let Some(nbr_str) = canvas_element.get_attribute("data-number-player") {
         match nbr_str.parse::<usize>() {

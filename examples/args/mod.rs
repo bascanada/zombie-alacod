@@ -8,7 +8,7 @@ mod web;
 mod cli;
 
 
-pub fn get_args() -> (u16, usize, Vec<String>, Vec<SocketAddr>, String) {
+pub fn get_args() -> (u16, usize, Vec<String>, Vec<SocketAddr>, String, String) {
 
     #[cfg(not(target_arch = "wasm32"))]
     {
@@ -21,6 +21,7 @@ pub fn get_args() -> (u16, usize, Vec<String>, Vec<SocketAddr>, String) {
             args.players.unwrap_or(vec![]),
             args.spectators.unwrap_or(vec![]),
             args.matchbox.unwrap_or(String::new()),
+            args.lobby.unwrap_or(String::new()),
         );
     }
     #[cfg(target_arch = "wasm32")]
@@ -32,7 +33,8 @@ pub fn get_args() -> (u16, usize, Vec<String>, Vec<SocketAddr>, String) {
             args.number_player.unwrap_or(1),
             vec!["localhost".to_string()],
             vec![],
-            args.matchbox.unwrap_or(String::new())
+            args.matchbox.unwrap_or(String::new()),
+            args.lobby.unwrap_or(String::new()),
         );
     }
 

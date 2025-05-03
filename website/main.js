@@ -6,18 +6,22 @@ const appFrame = document.getElementById('app-frame');
 
 // --- Attach Event Listeners ---
 
-const getFrameSrc = (appName) => {
-    return "./game.html?name=" + appName;
+const getFrameSrc = (appName, online, lobby) => {
+    return "./game.html?name=" + appName + "&online=" + online + "&lobby=" + lobby;
 }
 
 // App loading buttons
 sidebarButtons.forEach(button => {
     button.addEventListener('click', () => {
+
+        const urlParams = new URLSearchParams(window.location.search);
         console.log(button.dataset);
         const appPath = button.dataset.app; // Get the HTML path
+        const onlinePath = button.dataset.online;
+        const lobby = urlParams.get("lobby") || "";
         if (appPath) {
             console.log(`Loading app from: ${appPath}`);
-            appFrame.src = getFrameSrc(appPath); // Set the iframe source
+            appFrame.src = getFrameSrc(appPath, onlinePath, lobby); // Set the iframe source
         }
     });
 });
@@ -47,17 +51,21 @@ console.log("Iframe loader initialized. Select an app.");
 
 // --- Service Worker Registration ---
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js') // Path relative to origin root
-            .then((registration) => {
-                console.log('Service Worker registered successfully with scope: ', registration.scope);
-                document.getElementById('status').textContent = 'Service Worker registered. App should load faster next time!';
-            })
-            .catch((error) => {
-                console.error('Service Worker registration failed: ', error);
-                document.getElementById('status').textContent = 'Service Worker registration failed.';
-            });
-    });
+    const hostname = window.location.hostname;
+
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js') // Path relative to origin root
+                .then((registration) => {
+                    console.log('Service Worker registered successfully with scope: ', registration.scope);
+                    document.getElementById('status').textContent = 'Service Worker registered. App should load faster next time!';
+                })
+                .catch((error) => {
+                    console.error('Service Worker registration failed: ', error);
+                    document.getElementById('status').textContent = 'Service Worker registration failed.';
+                });
+        });
+    }
 } else {
     console.log('Service Workers not supported in this browser.');
     document.getElementById('status').textContent = 'Service Workers not supported. App will load normally.';
