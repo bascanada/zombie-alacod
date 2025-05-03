@@ -32,12 +32,6 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Dependency
         run: sudo apt-get install g++ make pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0 libwayland-dev libxkbcommon-dev && rustup component add rustfmt
-      - name: Install doctl
-        uses: digitalocean/action-doctl@v2
-        with:
-          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-      - name: Update deployment
-        run: doctl apps create-deployment 12321cca-c9b1-4e19-9961-3d5ebc8ff12a
       - name: Dependencies
         run: cargo vendor && (make dep_web || echo "ok")
       - name: Test
