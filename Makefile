@@ -112,8 +112,15 @@ build_character_tester_web:
 build_website: build_map_preview_web build_character_tester_web
 	cp -r ./assets ./website/
 
+build_docker_website: build_website
+	docker build -f ./website/Dockerfile ./website -t ghcr.io/bascanada/zombie-alacod:latest
 
 # Publish
 push_docker_matchbox_server:
 	docker push ghcr.io/bascanada/matchbox_server:latest
+
+push_docker_website:
+	docker push ghcr.io/bascanada/zombie-alacod:latest
+
+
 

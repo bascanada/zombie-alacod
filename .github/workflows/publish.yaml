@@ -32,11 +32,8 @@ jobs:
       - name: Build docker matchbox
         run: make build_docker_matchbox_server
       - name: Build web
-        run: make build_website TARGET=web PROFILE=prod
+        run: make build_docker_website TARGET=web PROFILE=prod
       - name: Publish docker matchbox
         run: make push_docker_matchbox_server
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.ACCESS_TOKEN }}
-          publish_dir: ./website
+      - name: Publish docker website
+        run: make push_docker_website
