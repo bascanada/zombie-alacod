@@ -17,9 +17,6 @@ pub struct SpriteSheetConfig {
 }
 
 
-pub struct SkinConfig(pub HashMap<String, String>);
-
-
 // -- Animation Definition Configuration --
 #[derive(Deserialize, Debug, Clone)]
 pub struct AnimationIndices {
@@ -50,17 +47,6 @@ pub struct LayerName {
 #[derive(Component, Clone)]
 pub struct ActiveLayers {
     pub layers: HashMap<String, String>,
-}
-
-
-#[derive(Component, Clone)]
-pub struct Skin {
-    pub current: String,
-}
-
-#[derive(Component)]
-pub struct ShadowSkin {
-    pub current: String,
 }
 
 #[derive(Component, Reflect, Default, Clone, Debug, PartialEq, Eq)]
@@ -417,27 +403,6 @@ pub fn set_sprite_flip(
     }
 }
 
-pub fn watch_change_skin(
-    mut query_skin: Query<(&Skin, &mut ShadowSkin)>
-) {
-    for (skin, mut shadow) in query_skin.iter_mut() {
-        if skin.current != shadow.current {
-            shadow.current = skin.current.clone();
-            println!("skin is updated");
-        }
-    }
-}
-
-// PUBLIC HELPER FUNCTIONS
-
-pub fn change_skin(
-    skin: &mut Skin,
-    
-    skin_name: String,
-) {
-    skin.current = skin_name;
-}
-
 /// Toggles the specified layers on or off for the given entity.
 /// If a layer is currently active, it will be removed.
 /// If a layer is not active, it will be added.
@@ -565,14 +530,12 @@ impl Plugin for D2AnimationPlugin {
         
         app
             .rollback_component_with_reflect::<AnimationState>()
-            .rollback_component_with_clone::<Skin>()
             .rollback_component_with_clone::<ActiveLayers>();
 
         app.add_systems(
             Update,
             (
-                watch_change_skin,
-                character_visuals_update_system.after(watch_change_skin),
+                character_visuals_update_system,
                 animate_sprite_system.after(character_visuals_update_system),
                 check_animation_config_reload_system.after(animate_sprite_system),
             )
