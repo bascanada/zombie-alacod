@@ -4,10 +4,18 @@ use leafwing_input_manager::prelude::*;
 // === Leafwing Input Actions ===
 #[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug, Reflect)]
 pub enum PlayerAction {
+    #[actionlike(DualAxis)]
+    Pan,
+
     MoveUp,
     MoveDown,
     MoveLeft,
     MoveRight,
+
+    Interaction,
+
+    PointerPosition,
+    PointerClick,
 }
 
 // Utility function to create the input map
@@ -21,14 +29,18 @@ pub fn get_input_map() -> InputMap<PlayerAction> {
         (PlayerAction::MoveLeft, KeyCode::ArrowLeft),
         (PlayerAction::MoveRight, KeyCode::KeyD),
         (PlayerAction::MoveRight, KeyCode::ArrowRight),
+        (PlayerAction::Interaction, KeyCode::KeyH)
     ]);
     // Add gamepad support if needed
     map.insert(PlayerAction::MoveUp, GamepadButton::DPadUp);
     map.insert(PlayerAction::MoveDown, GamepadButton::DPadDown);
     map.insert(PlayerAction::MoveLeft, GamepadButton::DPadLeft);
     map.insert(PlayerAction::MoveRight, GamepadButton::DPadRight);
+    map.insert(PlayerAction::Interaction, GamepadButton::North);
     // Add more bindings...
-    map
+
+    map.with_dual_axis(PlayerAction::Pan, GamepadStick::LEFT)
+
 }
 
 

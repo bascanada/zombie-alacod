@@ -1,7 +1,8 @@
-use bevy::{prelude::*, reflect::TypePath};
+use bevy::{prelude::*, reflect::TypePath, utils::HashMap};
 use serde::Deserialize;
 
 use crate::character::movement::MovementConfig;
+
 
 #[derive(Asset, TypePath, Deserialize, Debug, Clone)]
 pub struct PlayerConfig {

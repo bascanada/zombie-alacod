@@ -13,6 +13,7 @@ const getFrameSrc = (appName) => {
 // App loading buttons
 sidebarButtons.forEach(button => {
     button.addEventListener('click', () => {
+        console.log(button.dataset);
         const appPath = button.dataset.app; // Get the HTML path
         if (appPath) {
             console.log(`Loading app from: ${appPath}`);

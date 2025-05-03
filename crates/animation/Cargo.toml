@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 bevy = "0.15"
+bevy_ggrs = "0.17.0"
 
 serde = { version = "1.0", features = ["derive"] }
 

@@ -1,11 +1,30 @@
 mod args;
 
+use animation::{toggle_layer, ActiveLayers, AnimationState, FacingDirection};
 use args::get_args;
 use bevy::{prelude::*, utils::hashbrown::HashMap, window::WindowResolution};
 use game::{character::{movement::Velocity, player::{config::{PlayerConfig, PlayerConfigHandles}, control::{get_input_map, PlayerAction}, LocalPlayer, Player}}, frame::FrameDebugUIPlugin, jjrs::{GggrsConnectionConfiguration, GggrsSessionConfiguration}, plugins::BaseZombieGamePlugin};
 
 use utils::{camera::tod::setup_camera, web::WebPlugin};
 
+
+fn character_equipment_system(
+    mut commands: Commands,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut query: Query<(Entity, &mut ActiveLayers)>,
+) {
+    for (entity, mut active_layers) in query.iter_mut() {
+        // Toggle helmet layer when 'H' is pressed
+        if keyboard_input.just_pressed(KeyCode::KeyH) {
+            toggle_layer(
+                entity,
+                &mut commands,
+                &mut active_layers,
+                vec!["hair".to_string()],
+            );
+        }
+    }
+}
 
 
 fn main() {
@@ -38,5 +57,6 @@ fn main() {
         .add_plugins(BaseZombieGamePlugin::new(matchbox != ""))
         .insert_resource(GggrsSessionConfiguration { matchbox: matchbox != "", matchbox_url: matchbox.clone(), connection: GggrsConnectionConfiguration { input_delay: 5, max_player: nbr_player, desync_interval: 10, socket: players.len() > 1, udp_port: local_port}, players: players })
         .add_systems(Startup, setup_camera)
+        .add_systems(Update, character_equipment_system)
         .run();
 }

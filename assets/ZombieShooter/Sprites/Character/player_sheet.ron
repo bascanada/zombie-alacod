@@ -2,6 +2,13 @@
     path: "ZombieShooter/Sprites/Character/Body/Body.png",
     tile_size: (32, 32),
     columns: 10,
-
     rows: 1,
+
+    animated: true,
+    name: "body",
+
+    offset_x: 20.0,
+    offset_y: 0.0,
+    offset_z: 1.0,
+
 )

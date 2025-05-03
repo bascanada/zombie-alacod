@@ -1,15 +1,15 @@
 (
-    path: "ZombieShooter/Sprites/Character/Shirt/Shirt1.png",
+    path: "ZombieShooter/Sprites/Character/Hair/Hair1.png",
     tile_size: (32, 32),
     columns: 10,
     rows: 1,
     
-    name: "shirt",
+    name: "hair",
     animated: true,
 
     offset_x: 20.0,
     offset_y: 0.0,
     offset_z: 1.1,
-    
+
 
 )

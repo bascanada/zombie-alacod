@@ -57,8 +57,13 @@ dep_web:
 	rustup target add wasm32-unknown-unknown
 	cargo install wasm-bindgen-cli
 
+dep_hosting:
+	npm install -g live-server
+
 dep_matchbox:
 	cargo install matchbox_server
+
+dep: dep_web dep_hosting dep_matchbox
 
 # Dev run
 
@@ -75,27 +80,20 @@ map_explorer:
 character_tester:
 	cargo run --example character_tester $(ARGS) --features native -- --local-port 7000 --players localhost
 
-character_tester_1:
-	cargo run --example character_tester $(ARGS) --features native -- --local-port 7000 --players localhost 127.0.0.1:7001
-
-character_tester_2:
-	cargo run --example character_tester $(ARGS) --features native -- --local-port 7001 --players 127.0.0.1:7000 localhost
-
 character_tester_matchbox:
-	cargo run --example character_tester $(ARGS) --features native -- --number-player 2 --matchbox "ws://127.0.0.1:3536/extreme_bevy?next=2" --players localhost remote
-
-character_tester_matchbox_2:
-	cargo run --example character_tester $(ARGS) --features native -- --number-player 2 --matchbox "ws://127.0.0.1:3536/extreme_bevy?next=2" --players remote localhost
-
+	cargo run --example character_tester $(ARGS) --features native -- --number-player 2 --matchbox "wss://matchbox.bascanada.org/extreme_bevy?next=2" --players localhost remote
 
 matchbox_server:
 	cargo run -p matchbox_server
 
 host_website:
-	cd website && python3 -m http.server 9090
+	cd website && live-server
 
 
 # Build
+
+cp_asset:
+	cp -r ./assets ./website/
 
 build_docker_matchbox_server:
 	docker build -f ./crates/matchbox_server/Dockerfile ./crates/matchbox_server/ -t ghcr.io/bascanada/matchbox_server:latest
@@ -108,9 +106,10 @@ build_character_tester_web:
 	cargo build --example character_tester --target wasm32-unknown-unknown $(RELEASE)
 	wasm-bindgen --out-dir ./website/character_tester --out-name wasm --target web $(CARGO_TARGET_DIR)/wasm32-unknown-unknown/$(MODE_DIR)/examples/character_tester.wasm
 
+build_website: cp_asset build_map_preview_web build_character_tester_web
 
-build_website: build_map_preview_web build_character_tester_web
-	cp -r ./assets ./website/
+build_docker_website: build_website
+	docker build -f ./website/Dockerfile ./websites -t ghcr.io/bascanada/zombie-alacod:latest
 
 build_docker_website: build_website
 	docker build -f ./website/Dockerfile ./website -t ghcr.io/bascanada/zombie-alacod:latest
