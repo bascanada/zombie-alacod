@@ -286,7 +286,6 @@ pub fn character_visuals_spawn_system(
     sprite_query: Query<(Entity, &LayerName, &Sprite)>,
 ) {
     for (entity, config_handles, mut active_layers, mut loading_assets, anim_state) in query.iter_mut() {
-        println!("I HAVE LOADING ASSET");
         let total_items = loading_assets.layers.len() + loading_assets.remove.len();
         let mut processed_count = 0;
         let mut loaded_items = vec![];

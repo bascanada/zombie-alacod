@@ -81,7 +81,7 @@ character_tester:
 	cargo run --example character_tester $(ARGS) --features native -- --local-port 7000 --players localhost
 
 character_tester_matchbox:
-	cargo run --example character_tester $(ARGS) --features native -- --number-player 2 --matchbox "ws://127.0.0.1:3536/extreme_bevy?next=2" --players localhost remote
+	cargo run --example character_tester $(ARGS) --features native -- --number-player 2 --matchbox "wss://matchbox.bascanada.org/extreme_bevy?next=2" --players localhost remote
 
 matchbox_server:
 	matchbox_server

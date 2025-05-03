@@ -20,6 +20,7 @@ pub struct GlobalAsset {
 
 impl GlobalAsset {
 
+/*
     pub fn create(asset_server: &AssetServer) -> Self {
         Self {
             spritesheets: bmap!(
@@ -30,7 +31,7 @@ impl GlobalAsset {
             animations: bmap!("player" => asset_server.load(PLAYER_ANIMATIONS_CONFIG_PATH)),
             
 
-        }/*
+        }
         let sprite_sheet_handle: Handle<SpriteSheetConfig> =
         ;
     let sprite_sheet_shirt_handle: Handle<SpriteSheetConfig> =
@@ -41,8 +42,7 @@ impl GlobalAsset {
         asset_server.load(PLAYER_ANIMATIONS_CONFIG_PATH);
     
     let player_config_handle: Handle<PlayerConfig> = asset_server.load(PLAYER_CONFIG_PATH);
-    */
         
-    }
+    }*/
     
 }
