@@ -40,3 +40,5 @@ jobs:
         run: make format
       - name: Build web
         run: make build_website TARGET=web PROFILE=prod
+      - name: Build matchbox
+        run: make build_docker_matchbox_server 

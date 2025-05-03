@@ -84,7 +84,7 @@ character_tester_matchbox:
 	cargo run --example character_tester $(ARGS) --features native -- --number-player 2 --matchbox "wss://matchbox.bascanada.org/extreme_bevy?next=2" --players localhost remote
 
 matchbox_server:
-	matchbox_server
+	cargo run -p matchbox_server
 
 host_website:
 	cd website && live-server
@@ -95,6 +95,9 @@ host_website:
 cp_asset:
 	cp -r ./assets ./website/
 
+build_docker_matchbox_server:
+	docker build -f ./crates/matchbox_server/Dockerfile ./crates/matchbox_server/ -t ghcr.io/bascanada/matchbox_server:latest
+
 build_map_preview_web:
 	cargo build --example map_preview --target wasm32-unknown-unknown --features bevy_ecs_tilemap/atlas $(RELEASE)
 	wasm-bindgen --out-dir ./website/map_preview --out-name wasm --target web $(CARGO_TARGET_DIR)/wasm32-unknown-unknown/$(MODE_DIR)/examples/map_preview.wasm
@@ -103,6 +106,13 @@ build_character_tester_web:
 	cargo build --example character_tester --target wasm32-unknown-unknown $(RELEASE)
 	wasm-bindgen --out-dir ./website/character_tester --out-name wasm --target web $(CARGO_TARGET_DIR)/wasm32-unknown-unknown/$(MODE_DIR)/examples/character_tester.wasm
 
-
 build_website: cp_asset build_map_preview_web build_character_tester_web
+
+build_docker_website: build_website
+	docker build -f ./website/Dockerfile ./websites -t ghcr.io/bascanada/zombie-alacod:latest
+
+
+# Publish
+push_docker_matchbox_server:
+	docker push ghcr.io/bascanada/matchbox_server:latest
 
