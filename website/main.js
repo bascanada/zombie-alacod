@@ -48,7 +48,6 @@ unloadButton.addEventListener('click', () => {
 // The iframe starts empty (src="about:blank")
 console.log("Iframe loader initialized. Select an app.");
 
-
 // --- Service Worker Registration ---
 if ('serviceWorker' in navigator) {
     const hostname = window.location.hostname;

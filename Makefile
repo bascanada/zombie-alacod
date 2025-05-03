@@ -107,6 +107,7 @@ build_character_tester_web:
 	wasm-bindgen --out-dir ./website/character_tester --out-name wasm --target web $(CARGO_TARGET_DIR)/wasm32-unknown-unknown/$(MODE_DIR)/examples/character_tester.wasm
 
 build_website: cp_asset build_map_preview_web build_character_tester_web
+	echo "const CACHE_NAME = 'wasm-app-cache-$(date +%s)';" > website/cache-version.js
 
 build_docker_website: build_website
 	docker build -f ./website/Dockerfile ./websites -t ghcr.io/bascanada/zombie-alacod:latest

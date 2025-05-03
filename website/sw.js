@@ -1,7 +1,11 @@
 // sw.js
 
 // Choose a cache name - increment version when assets change
-const CACHE_NAME = 'wasm-app-cache-v1';
+import("./cache-version.js").then((m) => {
+
+const CACHE_NAME = m.CACHE_NAME;
+
+console.log("PWA cache name " + CACHE_NAME);
 // List the files you want to cache initially
 // Include the iframe's HTML, the JS glue code, and the WASM file itself
 
@@ -108,4 +112,5 @@ self.addEventListener('fetch', (event) => {
         });
       })
   );
+});
 });
