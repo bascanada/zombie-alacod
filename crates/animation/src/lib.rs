@@ -13,7 +13,10 @@ pub struct SpriteSheetConfig {
     pub columns: u32,
     pub rows: u32,
     pub name: String,
-    pub offset: f32,
+    pub offset_x: f32,
+    pub offset_y: f32,
+    pub offset_z: f32,
+    pub animated: bool,
 }
 
 
@@ -43,6 +46,12 @@ pub struct LoadingAsset {
 pub struct LayerName {
     pub name: String
 }
+
+#[derive(Component)]
+pub struct AnimatedLayer {}
+
+#[derive(Component)]
+pub struct ColoredLayer {}
 
 #[derive(Component, Clone)]
 pub struct ActiveLayers {
@@ -132,14 +141,15 @@ fn animate_sprite_system(
         &mut AnimationTimer,
         &AnimationState,
     ), Without<LoadingAsset>>,
-    mut query_sprites: Query<&mut Sprite, With<LayerName>>,
+    mut query_sprites: Query<(&mut Sprite, &LayerName), With<AnimatedLayer>>,
+    
 ) {
     for (childs, config_handles, mut timer, state) in query.iter_mut() {
         if let Some(anim_config) = animation_configs.get(&config_handles.animations) {
             timer.frame_timer.tick(time.delta());
             if timer.frame_timer.just_finished() {
                 for child in childs.iter() {
-                    if let Ok(mut sprite) = query_sprites.get_mut(*child) {
+                    if let Ok((mut sprite, _)) = query_sprites.get_mut(*child) {
                         if let Some(atlas) = &mut sprite.texture_atlas {
                             if let Some(indices) = anim_config.animations.get(&state.0) {
                                 let start_index = indices.start;
@@ -218,7 +228,7 @@ fn character_visuals_update_system(
     spritesheet_configs: Res<Assets<SpriteSheetConfig>>,
     mut ev_asset: EventReader<AssetEvent<SpriteSheetConfig>>,
     query: Query<(&Children, Entity, &CharacterAnimationHandles)>,
-    mut query_sprite: Query<(&mut Sprite, &LayerName)>,
+    mut query_sprite: Query<(&mut Sprite,&mut Transform, &LayerName)>,
 ) {
     for event in ev_asset.read() {
         if let AssetEvent::Modified { id } = event {
@@ -240,12 +250,15 @@ fn character_visuals_update_system(
                             );
 
                             for child in childs.iter() {
-                                if let Ok((mut sprite, layer_name)) = query_sprite.get_mut(*child) {
+                                if let Ok((mut sprite, mut transform, layer_name)) = query_sprite.get_mut(*child) {
                                     if layer_name.name == new_config.name {
                                         sprite.texture_atlas = Some(TextureAtlas {
                                             layout: texture_atlas_layouts.add(new_layout.clone()),
                                             index: 0,
                                         });
+                                        transform.translation.x = new_config.offset_x;
+                                        transform.translation.z = new_config.offset_z;
+                                        transform.translation.y = new_config.offset_y;
                                         sprite.image = asset_server.load(&new_config.path);
                                     }
                                 }
@@ -318,7 +331,7 @@ pub fn character_visuals_spawn_system(
                         );
                         let layout_handle = texture_atlas_layouts.add(layout);
 
-                        let sprite = commands.spawn((
+                        let mut entity_commands = commands.spawn((
                             Sprite {
                                 image: texture_handle.clone(),
                                 texture_atlas: Some(TextureAtlas {
@@ -327,9 +340,15 @@ pub fn character_visuals_spawn_system(
                                 }),
                                 ..default()
                             },
-                            Transform::from_xyz(0.0, 0.0, spritesheet_config.offset),
+                            Transform::from_xyz(spritesheet_config.offset_x, spritesheet_config.offset_y, spritesheet_config.offset_z),
                             LayerName { name: spritesheet_config.name.clone() },
-                        )).id();
+                        ));
+
+                        if spritesheet_config.animated {
+                            entity_commands.insert(AnimatedLayer{});
+                        }
+
+                        let sprite = entity_commands.id();
 
                         commands.entity(entity).add_child(sprite);
 

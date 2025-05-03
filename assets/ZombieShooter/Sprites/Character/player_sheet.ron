@@ -4,7 +4,11 @@
     columns: 10,
     rows: 1,
 
+    animated: true,
     name: "body",
 
-    offset: 1.0,
+    offset_x: 20.0,
+    offset_y: 0.0,
+    offset_z: 1.0,
+
 )
