@@ -4,6 +4,7 @@ use animation::{toggle_layer, ActiveLayers, AnimationState, FacingDirection};
 use args::get_args;
 use bevy::{prelude::*, utils::hashbrown::HashMap, window::WindowResolution};
 use game::{character::{movement::Velocity, player::{config::{PlayerConfig, PlayerConfigHandles}, control::{get_input_map, PlayerAction}, LocalPlayer, Player}}, frame::FrameDebugUIPlugin, jjrs::{GggrsConnectionConfiguration, GggrsSessionConfiguration}, plugins::BaseZombieGamePlugin};
+use bevy_light_2d::prelude::*;
 
 use utils::{camera::tod::setup_camera, web::WebPlugin};
 
@@ -59,4 +60,13 @@ fn main() {
         .add_systems(Startup, setup_camera)
         .add_systems(Update, character_equipment_system)
         .run();
+}
+
+
+pub fn setup(mut commands: Commands) {
+    commands.spawn(PointLight2d {
+        intensity: 3.0,
+        radius: 100.0,
+        ..default()
+    });
 }

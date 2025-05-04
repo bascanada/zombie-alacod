@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_light_2d::prelude::*;
 use bevy_ggrs::{prelude::*, GgrsSchedule};
 use leafwing_input_manager::plugin::InputManagerPlugin;
 use std::hash::Hash;
@@ -29,6 +30,7 @@ impl Plugin for BaseZombieGamePlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(ZAudioPlugin {});
         app.add_plugins(D2AnimationPlugin);
+        app.add_plugins(Light2dPlugin);
 
         app.add_plugins((
             RonAssetPlugin::<PlayerConfig>::new(&["ron"]),

@@ -21,6 +21,7 @@ bevy = { version = "0.15", default-features = false, features = [
   "bevy_sprite", "bevy_render", "bevy_core_pipeline", "webgl2", "png", "multi_threaded"
   ] }
 bevy_ggrs = { version = "0.17", features = ["wasm-bindgen"] }
+bevy_light_2d = "0.5"
 bevy_matchbox = { version = "0.11", features = ["ggrs"] }
 bevy_kira_audio ={ version = "0.22" }
 leafwing-input-manager = "0.16.0"
