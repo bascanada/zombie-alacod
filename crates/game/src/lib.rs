@@ -4,3 +4,4 @@ pub mod jjrs;
 pub mod frame;
 pub mod audio;
 pub mod global_asset;
+pub mod weapons;

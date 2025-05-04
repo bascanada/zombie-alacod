@@ -22,8 +22,6 @@ const INPUT_DOWN: u16 = 1 << 1;
 const INPUT_LEFT: u16 = 1 << 2;
 const INPUT_RIGHT: u16 = 1 << 3;
 
-const INPUT_INTERATION: u16 = 1 << 4;
-
 const PAN_FACING_THRESHOLD: i16 = 5;
 
 #[repr(C)]
@@ -31,7 +29,10 @@ const PAN_FACING_THRESHOLD: i16 = 5;
 pub struct BoxInput{
     pub buttons: u16,
     pub pan_x: i16,
-    pub pan_y: i16
+    pub pan_y: i16,
+
+    pub fire: bool,
+    pub switch_weapon: bool,
 }
 
 #[derive(Resource, Default, Debug, Clone, Copy)]
@@ -83,6 +84,14 @@ pub fn read_local_inputs(
 
          if action_state.pressed(&PlayerAction::Interaction) {
             input.buttons |= INPUT_INTERATION;
+         }
+
+         if action_state.pressed(&PlayerAction::PointerClick) {
+            input.fire = true;
+         }
+
+         if action_state.pressed(&PlayerAction::SwitchWeapon) {
+            input.switch_weapon = true;
          }
 
 
