@@ -44,11 +44,6 @@ pub struct Weapon {
     pub bullets_in_mag: u32,
     pub bullet_type: BulletType,
     pub range: f32,              // how far bullets travel
-    
-    // Internal weapon state
-    pub last_shot_time: f32,
-    pub burst_shots_left: u8,    // for burst mode
-    pub is_firing: bool,
 }
 
 impl Default for Weapon {
@@ -63,9 +58,6 @@ impl Default for Weapon {
             bullets_in_mag: 12,
             bullet_type: BulletType::Standard { damage: 10.0, speed: 800.0 },
             range: 800.0,
-            last_shot_time: 0.0,
-            burst_shots_left: 0,
-            is_firing: false,
         }
     }
 }
@@ -93,7 +85,7 @@ impl Default for WeaponPosition {
 }
 
 /// Component for bullets
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct Bullet {
     pub velocity: Vec2,
     pub bullet_type: BulletType,
@@ -134,7 +126,7 @@ pub struct WeaponState {
 
 // Rollback state for bullets
 #[derive(Component, Clone)]
-struct BulletRollbackState {
+pub struct BulletRollbackState {
     spawn_frame: u32,
     initial_position: Vec2,
     direction: Vec2,
@@ -146,6 +138,7 @@ pub struct FireWeaponEvent {
 }
 
 
+// Function to spawn weapon , all weapon should be spawn on the user when they got them
 pub fn spawn_weapon_for_player(
     commands: &mut Commands,
     global_assets: &Res<GlobalAsset>,
@@ -164,6 +157,9 @@ pub fn spawn_weapon_for_player(
     let animation_bundle =
         AnimationBundle::new(map_layers, animation_handle.clone(), starting_index, bmap!("body" => String::new()));
     
+    let mut weapon_state = WeaponState::default();
+    weapon_state.mag_ammo = weapon.mag_size;
+
 
     let entity = commands.spawn((
         Transform::from_translation(Vec3::new(0.0, -5.0, 0.0)).with_rotation(Quat::IDENTITY),
@@ -171,6 +167,7 @@ pub fn spawn_weapon_for_player(
             distance_from_player: 0.0,
             angle_offset: 0.0,
         },
+        weapon_state,
         weapon.clone(),
         animation_bundle
     )).add_rollback().id();
@@ -189,6 +186,51 @@ pub fn spawn_weapon_for_player(
 }
 
 
+fn spawn_bullet_rollback(
+    commands: &mut Commands,
+    position: Vec2,
+    direction: Vec2,
+    bullet_type: BulletType,
+    damage: f32,
+    range: f32,
+    player_handle: PlayerHandle,
+    current_frame: u32,
+) -> Entity {
+    let speed = match &bullet_type {
+        BulletType::Standard { speed, .. } => *speed / 60.0, // Convert to per-frame speed
+        BulletType::Explosive { speed, .. } => *speed / 60.0,
+        BulletType::Piercing { speed, .. } => *speed / 60.0,
+    };
+
+    let color = match &bullet_type {
+        BulletType::Standard { .. } => Color::BLACK,
+        BulletType::Explosive { .. } => Color::WHITE,
+        BulletType::Piercing { .. } => Color::BLACK,
+    };
+
+
+    commands.spawn((
+        Sprite::from_color(color, Vec2::new(10.0, 10.0)),
+        Bullet {
+            velocity: direction * speed,
+            bullet_type,
+            damage,
+            range,
+            distance_traveled: 0.0,
+            player_handle,
+        },
+        BulletRollbackState {
+            spawn_frame: current_frame,
+            initial_position: position,
+            direction,
+        },
+        Transform::from_translation(Vec3::new(position.x , position.y - 20.0, 5.0)),
+    )).add_rollback().id()
+
+}
+
+
+// Function to calculate the weapon position based on the player cursor location
 pub fn update_weapon_position(x: i16, y: i16, weapon_position: &mut WeaponPosition) {
     let vec = Vec2::new(x as f32, y as f32);
     let angle_radians = vec.y.atan2(vec.x);
@@ -199,6 +241,7 @@ pub fn update_weapon_position(x: i16, y: i16, weapon_position: &mut WeaponPositi
 }
 
 
+// Rollback system to correctly transform the weapon based on the position
 pub fn system_weapon_position(
     query: Query<(&Children, &WeaponPosition, &FacingDirection), With<Rollback>>,
     mut query_weapon: Query<(&Children, &mut Transform), With<ActiveWeapon>>,
@@ -230,6 +273,7 @@ pub fn system_weapon_position(
     }
 }
 
+// rollback system for weapon action , firing and all
 pub fn weapon_rollback_system(
     mut commands: Commands,
     inputs: Res<PlayerInputs<PeerConfig>>,
@@ -238,7 +282,7 @@ pub fn weapon_rollback_system(
     mut inventory_query: Query<(&mut WeaponInventory, &Player)>,
     mut weapon_query: Query<(&mut Weapon, &mut WeaponState, &Transform, &Parent)>,
 
-    player_query: Query<(&Transform, &Player)>,
+    player_query: Query<(&GlobalTransform, &Player)>,
 ) {
     // Process weapon firing for all players
     for (mut inventory, player) in inventory_query.iter_mut() {
@@ -257,9 +301,88 @@ pub fn weapon_rollback_system(
         if inventory.weapons.is_empty() {
             continue;
         }
+        
+        let (weapon_entity, _) = inventory.weapons[inventory.active_weapon_index];
+
+        if let Ok((mut weapon, mut weapon_state, weapon_transform, parent)) = weapon_query.get_mut(weapon_entity) {
+            if input.fire {
+                // Calculate fire rate in frames (60 FPS assumed) , need to be configure via ressource instead
+                let frame_per_shot = (60.0 / weapon.firing_rate) as u32;
+                let current_frame = frame.frame;
+                let frames_since_last_shot = current_frame - weapon_state.last_fire_frame;
+
+                let can_fire = match weapon.firing_mode {
+                    FiringMode::Automatic => {
+                        frames_since_last_shot >= frame_per_shot && weapon_state.mag_ammo > 0
+                    },
+                    FiringMode::Manual => {
+                        !weapon_state.is_firing && frames_since_last_shot >= frame_per_shot &&
+                        weapon_state.mag_ammo > 0
+                    },
+                    FiringMode::Burst => {
+                        if weapon_state.burst_shots_left > 0 && frames_since_last_shot >= frame_per_shot && weapon_state.mag_ammo > 0 {
+                            true
+                        } else if weapon_state.burst_shots_left == 0 && !weapon_state.is_firing && frames_since_last_shot >= (frame_per_shot * 3) && weapon_state.mag_ammo > 0 {
+                            weapon_state.burst_shots_left = 3;
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                };
+
+
+                weapon_state.is_firing = true;
+
+                if can_fire {
+                    if let Ok((player_transform, _)) = player_query.get(**parent) {
+                        let aim_dir = Vec2::new(
+                            input.pan_x as f32 / 127.0,
+                            input.pan_y as f32 / 127.0
+                        ).normalize();
+
+                        let firing_position = player_transform.translation().truncate() + weapon_transform.translation.truncate();
+
+                        // need to replace with fix seed random number
+                        let spread_angle = (rand::random::<f32>() - 0.5)  * weapon.spread;
+                        let spread_rotation = Mat2::from_angle(spread_angle);
+                        let direction = spread_rotation * aim_dir;
+
+
+                        // SPAWN BULLET
+                        spawn_bullet_rollback(
+                            &mut commands,
+                            firing_position,
+                            direction,
+                            weapon.bullet_type.clone(),
+                            match &weapon.bullet_type {
+                                BulletType::Standard { damage, .. } => *damage,
+                                BulletType::Explosive { damage, .. } => *damage,
+                                BulletType::Piercing { damage, .. } => *damage,
+                            },
+                            weapon.range,
+                            player.handle,
+                            frame.frame,
+                        );
+
+
+                        weapon_state.last_fire_frame = frame.frame;
+                        weapon_state.mag_ammo -= 1;
+                        
+                        if weapon.firing_mode == FiringMode::Burst && weapon_state.burst_shots_left > 0 {
+                            weapon_state.burst_shots_left -= 1;
+                        }
+                    }
+                }
+            } else {
+                weapon_state.is_firing = false;
+            }
+        }
     }
 }
 
+
+// Non rollback system to display the weapon correct sprite
 pub fn weapon_inventory_system(
     mut commands: Commands,
     query: Query<(Entity, &mut WeaponInventory)>,
@@ -292,184 +415,6 @@ pub fn weapon_inventory_system(
         }
     }
 }
-
-/*
-// System to handle weapon firing and state with rollback
-pub fn weapon_rollback_system(
-    mut commands: Commands,
-    inputs: Res<bevy_ggrs::PlayerInputs<BoxConfig>>,
-    frame: Res<bevy_ggrs::FrameCount>,
-    mut inventory_query: Query<(&mut WeaponInventory, &Parent, &Player)>,
-    mut weapon_query: Query<(&mut Weapon, &mut WeaponState, &Transform, &Parent)>,
-    player_query: Query<(&Transform, &Player)>,
-) {
-    // Process weapon firing for all players
-    for (mut inventory, parent, player) in inventory_query.iter_mut() {
-        // Get this player's input
-        if let Some(input) = inputs[player.handle as usize].0.latest() {
-            let game_input: GameInput = *input;
-            
-            // Handle weapon switching
-            if game_input.switch_weapon && !inventory.weapons.is_empty() {
-                inventory.active_weapon_index = (inventory.active_weapon_index + 1) % inventory.weapons.len();
-            }
-            
-            // Skip if no weapons
-            if inventory.weapons.is_empty() {
-                continue;
-            }
-            
-            // Get active weapon
-            let (weapon_entity, _) = inventory.weapons[inventory.active_weapon_index];
-            
-            if let Ok((mut weapon, mut weapon_state, weapon_transform, _)) = weapon_query.get_mut(weapon_entity) {
-                // Handle weapon firing
-                if game_input.fire {
-                    // Calculate fire rate in frames (60 FPS assumed)
-                    let frames_per_shot = (60.0 / weapon.firing_rate) as u64;
-                    let current_frame = *frame as u64;
-                    let frames_since_last_shot = current_frame - weapon_state.last_fire_frame as u64;
-                    
-                    let can_fire = match weapon.firing_mode {
-                        FiringMode::Automatic => {
-                            frames_since_last_shot >= frames_per_shot && weapon_state.mag_ammo > 0
-                        },
-                        FiringMode::Manual => {
-                            // Only fire if we weren't firing last frame (for single shots)
-                            !weapon_state.is_firing && 
-                            frames_since_last_shot >= frames_per_shot && 
-                            weapon_state.mag_ammo > 0
-                        },
-                        FiringMode::Burst => {
-                            if weapon_state.burst_shots_left > 0 && 
-                               frames_since_last_shot >= frames_per_shot && 
-                               weapon_state.mag_ammo > 0 {
-                                true
-                            } else if weapon_state.burst_shots_left == 0 && 
-                                    !weapon_state.is_firing && 
-                                    frames_since_last_shot >= (frames_per_shot * 3) && 
-                                    weapon_state.mag_ammo > 0 {
-                                // Start a new burst (3 bullets)
-                                weapon_state.burst_shots_left = 3;
-                                true
-                            } else {
-                                false
-                            }
-                        }
-                    };
-                    
-                    // Update firing state
-                    weapon_state.is_firing = true;
-                    
-                    if can_fire {
-                        // Get player transform
-                        if let Ok((player_transform, _)) = player_query.get(parent.get()) {
-                            // Get cursor position for this player
-                            let aim_dir = Vec2::new(
-                                game_input.cursor_x as f32 / 127.0,
-                                game_input.cursor_y as f32 / 127.0
-                            ).normalize();
-                            
-                            // Calculate firing position (from weapon)
-                            let firing_pos = weapon_transform.translation.truncate();
-                            
-                            // Apply weapon spread
-                            let spread_angle = (rand::random::<f32>() - 0.5) * weapon.spread;
-                            let spread_rotation = Mat2::from_angle(spread_angle);
-                            let direction = spread_rotation * aim_dir;
-                            
-                            // Spawn bullet
-                            /*spawn_bullet_rollback(
-                                &mut commands,
-                                firing_pos,
-                                direction,
-                                weapon.bullet_type.clone(),
-                                match &weapon.bullet_type {
-                                    BulletType::Standard { damage, .. } => *damage,
-                                    BulletType::Explosive { damage, .. } => *damage,
-                                    BulletType::Piercing { damage, .. } => *damage,
-                                },
-                                weapon.range,
-                                player.handle,
-                                frame.0,
-                            );*/
-                            println!("SPWANIN BUTLLING");
-                            
-                            // Update weapon state
-                            weapon_state.last_fire_frame = frame.0;
-                            weapon_state.mag_ammo -= 1;
-                            
-                            if weapon.firing_mode == FiringMode::Burst && weapon_state.burst_shots_left > 0 {
-                                weapon_state.burst_shots_left -= 1;
-                            }
-                        }
-                    }
-                } else {
-                    // Reset firing state when not pressing fire
-                    weapon_state.is_firing = false;
-                }
-            }
-        }
-    }
-}
-*/
-
-/*
-// Spawn a bullet with rollback properties
-fn spawn_bullet_rollback(
-    commands: &mut Commands,
-    position: Vec2,
-    direction: Vec2,
-    bullet_type: BulletType,
-    damage: f32,
-    range: f32,
-    player_handle: PlayerHandle,
-    current_frame: Frame,
-) -> Entity {
-    // Get bullet speed based on type
-    let speed = match &bullet_type {
-        BulletType::Standard { speed, .. } => *speed / 60.0, // Convert to per-frame speed
-        BulletType::Explosive { speed, .. } => *speed / 60.0,
-        BulletType::Piercing { speed, .. } => *speed / 60.0,
-    };
-    
-    // Get bullet color based on type
-    let color = match &bullet_type {
-        BulletType::Standard { .. } => Color::BLACK,
-        BulletType::Explosive { .. } => Color::WHITE,
-        BulletType::Piercing { .. } => Color::BLACK,
-    };
-
-    println!("spawning bullet");
-    
-    // Spawn bullet entity
-    commands.spawn((
-        SpriteBundle {
-            sprite: Sprite {
-                color,
-                custom_size: Some(Vec2::new(6.0, 6.0)),
-                ..default()
-            },
-            transform: Transform::from_translation(Vec3::new(position.x, position.y, 5.0)),
-            ..default()
-        },
-        Bullet {
-            velocity: direction * speed,
-            bullet_type,
-            damage,
-            range,
-            distance_traveled: 0.0,
-            player_handle,
-        },
-        BulletRollbackState {
-            spawn_frame: current_frame,
-            initial_position: position,
-            direction,
-        },
-        Rollback::new(0), // Bullet IDs will be generated by the caller
-    )).id()
-}*/
-
 
 pub fn bullet_rollback_system(
     mut commands: Commands,

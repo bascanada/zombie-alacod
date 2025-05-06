@@ -7,7 +7,7 @@ use bevy_common_assets::ron::RonAssetPlugin;
 use animation::{character_visuals_spawn_system, set_sprite_flip, D2AnimationPlugin};
 use bevy_ggrs::GgrsPlugin;
 
-use crate::{audio::ZAudioPlugin, character::{movement::Velocity, player::{config::PlayerConfig, control::PlayerAction, input::{apply_friction, apply_inputs, move_characters, read_local_inputs, update_animation_state, PointerWorldPosition}, jjrs::PeerConfig, Player}}, frame::{increase_frame_system, FrameCount}, global_asset::{add_global_asset, loading_asset_system}, jjrs::{log_ggrs_events, setup_ggrs_local, start_matchbox_socket, wait_for_players, GggrsSessionConfiguration}, weapons::{system_weapon_position, weapon_inventory_system, weapon_rollback_system, WeaponInventory, WeaponPosition, WeaponState}};
+use crate::{audio::ZAudioPlugin, character::{movement::Velocity, player::{config::PlayerConfig, control::PlayerAction, input::{apply_friction, apply_inputs, move_characters, read_local_inputs, update_animation_state, PointerWorldPosition}, jjrs::PeerConfig, Player}}, frame::{increase_frame_system, FrameCount}, global_asset::{add_global_asset, loading_asset_system}, jjrs::{log_ggrs_events, setup_ggrs_local, start_matchbox_socket, wait_for_players, GggrsSessionConfiguration}, weapons::{bullet_rollback_system, system_weapon_position, weapon_inventory_system, weapon_rollback_system, Bullet, BulletRollbackState, WeaponInventory, WeaponPosition, WeaponState}};
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Hash, States)]
 pub enum AppState {
@@ -46,6 +46,8 @@ impl Plugin for BaseZombieGamePlugin {
             .rollback_component_with_copy::<WeaponPosition>()
             .rollback_component_with_clone::<WeaponInventory>()
             .rollback_component_with_clone::<WeaponState>()
+            .rollback_component_with_clone::<Bullet>()
+            .rollback_component_with_clone::<BulletRollbackState>()
             .rollback_component_with_clone::<Transform>()
             .rollback_component_with_reflect::<Velocity>()
             .rollback_component_with_reflect::<Player>();
@@ -66,17 +68,20 @@ impl Plugin for BaseZombieGamePlugin {
         app.insert_resource(FrameCount { frame: 0 });
         app.add_systems(
             GgrsSchedule, (
+                // HANDLE ALL PLAYERS INPUT
                 apply_inputs,
-                // ....
+                // MOVEMENT CHARACTERS
                 apply_friction.after(apply_inputs),
                 move_characters.after(apply_friction),
+                // WEAPON
                 system_weapon_position.after(move_characters),
                 weapon_rollback_system.after(system_weapon_position),
+                bullet_rollback_system.after(weapon_rollback_system),
                 // ANIMATION CRATE
-                character_visuals_spawn_system.after(weapon_rollback_system),
+                character_visuals_spawn_system.after(bullet_rollback_system),
                 set_sprite_flip.after(character_visuals_spawn_system),
-                // ...
                 update_animation_state.after(set_sprite_flip),
+                // After each frame
                 increase_frame_system.after(update_animation_state)
             ));
         app.add_systems(Update, weapon_inventory_system);

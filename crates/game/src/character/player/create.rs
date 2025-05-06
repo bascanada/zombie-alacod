@@ -4,7 +4,7 @@ use bevy::{prelude::*, utils:: HashMap};
 use leafwing_input_manager::{prelude::ActionState, InputManagerBundle};
 use utils::bmap;
 
-use crate::{character::movement::Velocity, global_asset::GlobalAsset, weapons::{spawn_weapon_for_player, Weapon, WeaponInventory, WeaponPosition}};
+use crate::{character::movement::Velocity, global_asset::GlobalAsset, weapons::{spawn_weapon_for_player, FiringMode, Weapon, WeaponInventory, WeaponPosition}};
 
 use bevy_ggrs::AddRollbackCommandExtension;
 use super::{config::{PlayerConfig, PlayerConfigHandles}, control::{get_input_map, PlayerAction}, LocalPlayer, Player};
@@ -58,6 +58,7 @@ pub fn create_player(
     let weapon = Weapon::default();
     let mut weapon_piston = Weapon::default();
     weapon_piston.name = "pistol".into();
+    weapon_piston.firing_mode = FiringMode::Automatic;
     let mut inventory = WeaponInventory::default();
 
     let weapon_entity = spawn_weapon_for_player(commands, global_assets, false, 0, entity, weapon, &mut inventory);
