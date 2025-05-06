@@ -7,7 +7,7 @@ use bevy_common_assets::ron::RonAssetPlugin;
 use animation::{character_visuals_spawn_system, set_sprite_flip, D2AnimationPlugin};
 use bevy_ggrs::GgrsPlugin;
 
-use crate::{audio::ZAudioPlugin, character::{movement::Velocity, player::{config::PlayerConfig, control::PlayerAction, input::{apply_friction, apply_inputs, move_characters, read_local_inputs, update_animation_state, PointerWorldPosition}, jjrs::PeerConfig, Player}}, frame::{increase_frame_system, FrameCount}, global_asset::{add_global_asset, loading_asset_system}, jjrs::{log_ggrs_events, setup_ggrs_local, start_matchbox_socket, wait_for_players, GggrsSessionConfiguration}, weapons::{system_weapon_position, weapon_rollback_system, WeaponPosition}};
+use crate::{audio::ZAudioPlugin, character::{movement::Velocity, player::{config::PlayerConfig, control::PlayerAction, input::{apply_friction, apply_inputs, move_characters, read_local_inputs, update_animation_state, PointerWorldPosition}, jjrs::PeerConfig, Player}}, frame::{increase_frame_system, FrameCount}, global_asset::{add_global_asset, loading_asset_system}, jjrs::{log_ggrs_events, setup_ggrs_local, start_matchbox_socket, wait_for_players, GggrsSessionConfiguration}, weapons::{system_weapon_position, weapon_inventory_system, weapon_rollback_system, WeaponInventory, WeaponPosition, WeaponState}};
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Hash, States)]
 pub enum AppState {
@@ -44,6 +44,8 @@ impl Plugin for BaseZombieGamePlugin {
             .rollback_resource_with_copy::<PointerWorldPosition>()
             .rollback_resource_with_copy::<FrameCount>()
             .rollback_component_with_copy::<WeaponPosition>()
+            .rollback_component_with_clone::<WeaponInventory>()
+            .rollback_component_with_clone::<WeaponState>()
             .rollback_component_with_clone::<Transform>()
             .rollback_component_with_reflect::<Velocity>()
             .rollback_component_with_reflect::<Player>();
@@ -77,5 +79,6 @@ impl Plugin for BaseZombieGamePlugin {
                 update_animation_state.after(set_sprite_flip),
                 increase_frame_system.after(update_animation_state)
             ));
+        app.add_systems(Update, weapon_inventory_system);
     }
 }

@@ -103,6 +103,7 @@ pub struct AnimationState(pub String);
 pub struct CharacterAnimationHandles {
     pub spritesheets: HashMap<String, Handle<SpriteSheetConfig>>,
     pub animations: Handle<AnimationMapConfig>,
+    pub starting_index: usize
 }
 
 #[derive(Component)]
@@ -139,6 +140,8 @@ impl AnimationBundle {
         spritesheets: HashMap<String, Handle<SpriteSheetConfig>>,
         animations: Handle<AnimationMapConfig>,
 
+        starting_index: usize,
+
         starting_layers: HashMap<String, String>,
     ) -> Self {
         Self {
@@ -149,6 +152,7 @@ impl AnimationBundle {
             handles: CharacterAnimationHandles {
                 spritesheets,
                 animations,
+                starting_index,
             },
             loading_asset: LoadingAsset {
                 layers: starting_layers,
@@ -290,7 +294,7 @@ fn character_visuals_update_system(
                                     if layer_name.name == new_config.name {
                                         sprite.texture_atlas = Some(TextureAtlas {
                                             layout: texture_atlas_layouts.add(new_layout.clone()),
-                                            index: 0,
+                                            index: config_handle.starting_index,
                                         });
                                         transform.translation.x = new_config.offset_x;
                                         transform.translation.z = new_config.offset_z;
@@ -328,7 +332,7 @@ pub fn character_visuals_spawn_system(
         let mut loaded_items = vec![];
 
 
-        let mut current_frame_index = 0;
+        let mut current_frame_index = config_handles.starting_index;
         
         // Try to determine the current animation frame from existing sprites
         if let Ok(children) = child_query.get(entity) {

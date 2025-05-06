@@ -30,11 +30,16 @@ impl GlobalAsset {
                 ),
                 "weapon_1" => bmap!(
                     "body" => asset_server.load("ZombieShooter/Sprites/Character/weapon_sheet.ron")
+                ),
+                "pistol" => bmap!(
+                    "body" => asset_server.load("ZombieShooter/Sprites/Character/weapon_sheet.ron")
                 )
+
             ),
             animations: bmap!(
                 "player" => asset_server.load(PLAYER_ANIMATIONS_CONFIG_PATH),
-                "weapon_1" => asset_server.load(PLAYER_ANIMATIONS_CONFIG_PATH)
+                "weapon_1" => asset_server.load(PLAYER_ANIMATIONS_CONFIG_PATH),
+                "pistol" => asset_server.load(PLAYER_ANIMATIONS_CONFIG_PATH)
             ),
             player_configs: bmap!(
                 "player" => asset_server.load(PLAYER_CONFIG_PATH)

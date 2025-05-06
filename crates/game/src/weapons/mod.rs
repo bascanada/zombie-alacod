@@ -2,11 +2,11 @@ use std::f32::consts::FRAC_PI_2;
 
 use animation::{AnimationBundle, FacingDirection};
 use bevy::{prelude::*, sprite::Anchor};
-use bevy_ggrs::{AddRollbackCommandExtension, Rollback};
+use bevy_ggrs::{AddRollbackCommandExtension, PlayerInputs, Rollback};
 use ggrs::PlayerHandle;
 use utils::bmap;
 
-use crate::{character::player::{jjrs::BoxConfig, Player}, frame::FrameCount, global_asset::GlobalAsset};
+use crate::{character::player::{jjrs::{BoxConfig, PeerConfig}, Player}, frame::FrameCount, global_asset::GlobalAsset};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FiringMode {
@@ -104,9 +104,10 @@ pub struct Bullet {
 }
 
 /// Component to track the player's weapon inventory
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Clone)]
 pub struct WeaponInventory {
     pub active_weapon_index: usize,
+    pub frame_switched: u32,
     pub weapons: Vec<(Entity, Weapon)>,  // Store entity handles and weapon data
 }
 
@@ -114,6 +115,7 @@ impl Default for WeaponInventory {
     fn default() -> Self {
         Self {
             active_weapon_index: 0,
+            frame_switched: 0,
             weapons: Vec::new(),
         }
     }
@@ -122,8 +124,7 @@ impl Default for WeaponInventory {
 
 
 // Component to track rollbackable state for weapons
-#[derive(Component, Reflect, Default)]
-#[reflect(Component)]
+#[derive(Component, Reflect, Default, Clone)]
 pub struct WeaponState {
     pub last_fire_frame: u32,
     pub mag_ammo: u32,
@@ -149,6 +150,9 @@ pub fn spawn_weapon_for_player(
     commands: &mut Commands,
     global_assets: &Res<GlobalAsset>,
 
+    active: bool,
+    starting_index: usize,
+
     player_entity: Entity,
     weapon: Weapon,
     inventory: &mut WeaponInventory,
@@ -158,19 +162,30 @@ pub fn spawn_weapon_for_player(
     let animation_handle = global_assets.animations.get(&weapon.name).unwrap().clone();
 
     let animation_bundle =
-        AnimationBundle::new(map_layers, animation_handle.clone(), bmap!("body" => String::new()));
+        AnimationBundle::new(map_layers, animation_handle.clone(), starting_index, bmap!("body" => String::new()));
     
 
-    commands.spawn((
+    let entity = commands.spawn((
         Transform::from_translation(Vec3::new(0.0, -5.0, 0.0)).with_rotation(Quat::IDENTITY),
-        Visibility::default(),
-        ActiveWeapon{},
         WeaponPosition {
             distance_from_player: 0.0,
             angle_offset: 0.0,
         },
+        weapon.clone(),
         animation_bundle
-    )).add_rollback().id()
+    )).add_rollback().id();
+
+    inventory.weapons.push((entity.clone(), weapon));
+
+    if active {
+        commands.entity(entity).insert((ActiveWeapon{}, Visibility::Inherited));
+        inventory.active_weapon_index = inventory.weapons.len() - 1;
+    } else {
+        commands.entity(entity).insert(Visibility::Hidden);
+    }
+
+
+    entity
 }
 
 
@@ -220,15 +235,63 @@ pub fn weapon_rollback_system(
     inputs: Res<PlayerInputs<PeerConfig>>,
     frame: Res<FrameCount>,
 
-    mut inventory_query: Query<(&mut WeaponInventory, &Parent, &Player)>,
+    mut inventory_query: Query<(&mut WeaponInventory, &Player)>,
     mut weapon_query: Query<(&mut Weapon, &mut WeaponState, &Transform, &Parent)>,
 
     player_query: Query<(&Transform, &Player)>,
 ) {
+    // Process weapon firing for all players
+    for (mut inventory, player) in inventory_query.iter_mut() {
+        let (input, _input_status) = inputs[player.handle];
 
+        if input.switch_weapon && !inventory.weapons.is_empty() {
+            let new_index = (inventory.active_weapon_index + 1) % inventory.weapons.len();
 
+            if new_index != inventory.active_weapon_index &&
+                inventory.frame_switched + 20 < frame.frame {
+                inventory.active_weapon_index = new_index;
+                inventory.frame_switched = frame.frame;
+            }
+        }
+
+        if inventory.weapons.is_empty() {
+            continue;
+        }
+    }
 }
 
+pub fn weapon_inventory_system(
+    mut commands: Commands,
+    query: Query<(Entity, &mut WeaponInventory)>,
+    mut weapon_entities: Query<(Entity, &mut Visibility),  With<Weapon>>,
+) {
+    for (player_entity, inventory) in query.iter() {
+        if inventory.weapons.is_empty() {
+            continue;
+        }
+
+        // Update active/inactive weapon visibility
+        for (i, (weapon_entity, _)) in inventory.weapons.iter().enumerate() {
+            let is_active = i == inventory.active_weapon_index;
+
+            
+            // For simplicity, we're using commands to add/remove components
+            // In a real implementation, you might want to use a Visibility component
+            if let Ok((_, mut visibility)) = weapon_entities.get_mut(*weapon_entity) {
+                if is_active {
+                    commands.entity(*weapon_entity)
+                        .insert(ActiveWeapon);
+                    *visibility = Visibility::Visible;
+                } else {
+                    commands.entity(*weapon_entity)
+                        .remove::<ActiveWeapon>();
+                    *visibility = Visibility::Hidden;
+                }
+            }
+
+        }
+    }
+}
 
 /*
 // System to handle weapon firing and state with rollback

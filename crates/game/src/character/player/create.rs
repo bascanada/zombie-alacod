@@ -28,7 +28,7 @@ pub fn create_player(
     };
 
     let animation_bundle =
-        AnimationBundle::new(map_layers, animation_handle.clone(), starting_layer);
+        AnimationBundle::new(map_layers, animation_handle.clone(),0, starting_layer);
 
     let mut entity = commands.spawn((
         Transform::from_scale(Vec3::splat(6.0)).with_translation(Vec3::new(-50.0 * handle as f32, 0.0, 0.0)),
@@ -56,19 +56,18 @@ pub fn create_player(
     let entity = entity.add_rollback().id();
 
     let weapon = Weapon::default();
-    let mut inventory = WeaponInventory{
-        active_weapon_index: 0,
-        weapons: vec![]
-    };
+    let mut weapon_piston = Weapon::default();
+    weapon_piston.name = "pistol".into();
+    let mut inventory = WeaponInventory::default();
 
-
-    let weapon_entity = spawn_weapon_for_player(commands, global_assets, entity, weapon, &mut inventory);
+    let weapon_entity = spawn_weapon_for_player(commands, global_assets, false, 0, entity, weapon, &mut inventory);
+    let weapon_secondary_entity = spawn_weapon_for_player(commands, global_assets, true, 1, entity, weapon_piston, &mut inventory);
 
     commands.entity(entity)
         .insert((
             inventory,
             WeaponPosition::default(),
         ))
-        .add_child(weapon_entity);
+        .add_child(weapon_entity).add_child(weapon_secondary_entity);
 
 }
