@@ -10,6 +10,7 @@ use serde::{Serialize, Deserialize};
 
 use crate::character::movement::{MovementConfig, Velocity};
 use crate::character::player::{control::PlayerAction, Player};
+use crate::weapons::{update_weapon_position, WeaponPosition};
 
 use super::config::PlayerConfig;
 use super::config::PlayerConfigHandles;
@@ -58,7 +59,7 @@ fn get_facing_direction(input: &BoxInput) -> FacingDirection {
 
 pub fn read_local_inputs(
     mut commands: Commands,
-    players: Query<(&ActionState<PlayerAction>, &GlobalTransform, &Player), With<LocalPlayer>>,
+    players: Query<(&ActionState<PlayerAction>, &Transform, &Player), With<LocalPlayer>>,
     
     q_window: Query<&Window, With<PrimaryWindow>>,
     q_camera: Query<(&Camera, &GlobalTransform)>,
@@ -82,10 +83,6 @@ pub fn read_local_inputs(
             input.buttons |= INPUT_RIGHT;
          }
 
-         if action_state.pressed(&PlayerAction::Interaction) {
-            input.buttons |= INPUT_INTERATION;
-         }
-
          if action_state.pressed(&PlayerAction::PointerClick) {
             input.fire = true;
          }
@@ -99,7 +96,7 @@ pub fn read_local_inputs(
             if let Ok((camera, camera_transform)) = q_camera.get_single() {
                 if let Some(cursor_position) = window.cursor_position() {
                     if let Ok(world_position) = camera.viewport_to_world_2d(camera_transform, cursor_position) {
-                        let player_position = transform.translation().truncate();
+                        let player_position = transform.translation.truncate();
                         let pointer_distance = world_position - player_position;
 
                         input.pan_x = pointer_distance.x.round().clamp(i16::MIN as f32, i16::MAX as f32) as i16;
@@ -120,12 +117,12 @@ pub fn apply_inputs(
     inputs: Res<PlayerInputs<PeerConfig>>,
     player_configs: Res<Assets<PlayerConfig>>,
 
-    mut query: Query<(Entity, &mut Velocity, &mut ActiveLayers, &mut FacingDirection, &PlayerConfigHandles, &Player), With<Rollback>>,
+    mut query: Query<(Entity, &mut Velocity, &mut ActiveLayers, &mut FacingDirection, &mut WeaponPosition, &PlayerConfigHandles, &Player), With<Rollback>>,
 
-    time: Res<Time>, 
+    time: Res<Time>,
 ) {
 
-    for (entity, mut velocity, mut active_layers, mut facing_direction , config_handles, player) in query.iter_mut() {
+    for (entity, mut velocity, mut active_layers, mut facing_direction , mut weapon_position, config_handles, player) in query.iter_mut() {
         if let Some(config) = player_configs.get(&config_handles.config) {
             let (input, _input_status) = inputs[player.handle];
 
@@ -137,6 +134,8 @@ pub fn apply_inputs(
             if input.buttons & INPUT_RIGHT != 0 { direction.x += 1.0; }
 
             *facing_direction = get_facing_direction(&input);
+
+            update_weapon_position(input.pan_x, input.pan_y, &mut weapon_position);
 
             if direction != Vec2::ZERO {
                  let move_delta = direction.normalize() * config.movement.acceleration * time.delta().as_secs_f32();
