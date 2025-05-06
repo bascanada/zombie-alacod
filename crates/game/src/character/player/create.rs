@@ -4,13 +4,14 @@ use bevy::{prelude::*, utils:: HashMap};
 use leafwing_input_manager::{prelude::ActionState, InputManagerBundle};
 use utils::bmap;
 
-use crate::{character::movement::Velocity, global_asset::GlobalAsset, weapons::{spawn_weapon_for_player, FiringMode, Weapon, WeaponInventory, WeaponPosition}};
+use crate::{character::movement::Velocity, global_asset::GlobalAsset, weapons::{spawn_weapon_for_player, FiringMode, Weapon, WeaponInventory, WeaponPosition, WeaponsConfig}};
 
 use bevy_ggrs::AddRollbackCommandExtension;
 use super::{config::{PlayerConfig, PlayerConfigHandles}, control::{get_input_map, PlayerAction}, LocalPlayer, Player};
 
 pub fn create_player(
     commands: &mut Commands,
+    weapons_asset: &Res<Assets<WeaponsConfig>>,
     global_assets: &Res<GlobalAsset>,
 
     local: bool,
@@ -55,20 +56,21 @@ pub fn create_player(
     
     let entity = entity.add_rollback().id();
 
-    let weapon = Weapon::default();
-    let mut weapon_piston = Weapon::default();
-    weapon_piston.name = "pistol".into();
-    weapon_piston.firing_mode = FiringMode::Automatic;
     let mut inventory = WeaponInventory::default();
 
-    let weapon_entity = spawn_weapon_for_player(commands, global_assets, false, 0, entity, weapon, &mut inventory);
-    let weapon_secondary_entity = spawn_weapon_for_player(commands, global_assets, true, 1, entity, weapon_piston, &mut inventory);
+
+    if let Some(weapons_config) = weapons_asset.get(&global_assets.weapons) {
+        for (i, (_, v)) in weapons_config.0.iter().enumerate() {
+            spawn_weapon_for_player(commands, global_assets, i == 0, entity, v.clone(), &mut inventory);
+        }
+    } else {
+        println!("NO ASSET FOR WEAPONS");
+    }
 
     commands.entity(entity)
         .insert((
             inventory,
             WeaponPosition::default(),
-        ))
-        .add_child(weapon_entity).add_child(weapon_secondary_entity);
+        ));
 
 }

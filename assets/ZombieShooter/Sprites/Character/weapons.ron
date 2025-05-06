@@ -1,0 +1,65 @@
+({
+    "pistol": (
+        config: (
+            name: "pistol",
+            firing_rate: 2.0,
+            firing_mode: Manual(),
+            spread: 0.05,
+            recoil: 3.0,
+            mag_size: 10,
+            bullet_type: Standard(
+                damage: 15.0,
+                speed: 900.0,
+            ),
+            range: 700.0,
+            reload_time_seconds: 1.5,
+        ),
+        sprite_config: (
+            name: "weapon_1",
+            index: 2,
+        )
+    ),
+    "machine_gun": (
+        config: (
+            name: "machine_gun",
+            firing_rate: 10.0,
+            firing_mode: Automatic(),
+            spread: 0.15,
+            recoil: 1.5,
+            mag_size: 30,
+            bullet_type: Standard(
+                damage: 8.0,
+                speed: 1000.0,
+            ),
+            range: 900.0,
+            reload_time_seconds: 2.5,
+        ),
+        sprite_config: (
+            name: "weapon_1",
+            index: 1,
+        )
+    ),
+    "shotgun": (
+        config: (
+            name: "shotgun",
+            firing_rate: 1.0,
+            firing_mode: Burst(
+                pellets_per_shot: 6,
+            ),
+            spread: 0.3,
+            recoil: 8.0,
+            mag_size: 5,
+            bullet_type: Piercing(
+                damage: 10.0,
+                speed: 700.0,
+                penetration: 1,
+            ),
+            range: 400.0,
+            reload_time_seconds: 3.0,
+        ),
+        sprite_config: (
+            name: "weapon_1",
+            index: 0,
+        )
+    ),
+})

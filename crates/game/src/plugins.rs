@@ -7,7 +7,7 @@ use bevy_common_assets::ron::RonAssetPlugin;
 use animation::{character_visuals_spawn_system, set_sprite_flip, D2AnimationPlugin};
 use bevy_ggrs::GgrsPlugin;
 
-use crate::{audio::ZAudioPlugin, character::{movement::Velocity, player::{config::PlayerConfig, control::PlayerAction, input::{apply_friction, apply_inputs, move_characters, read_local_inputs, update_animation_state, PointerWorldPosition}, jjrs::PeerConfig, Player}}, frame::{increase_frame_system, FrameCount}, global_asset::{add_global_asset, loading_asset_system}, jjrs::{log_ggrs_events, setup_ggrs_local, start_matchbox_socket, wait_for_players, GggrsSessionConfiguration}, weapons::{bullet_rollback_system, system_weapon_position, weapon_inventory_system, weapon_rollback_system, Bullet, BulletRollbackState, WeaponInventory, WeaponPosition, WeaponState}};
+use crate::{audio::ZAudioPlugin, character::{movement::Velocity, player::{config::PlayerConfig, control::PlayerAction, input::{apply_friction, apply_inputs, move_characters, read_local_inputs, update_animation_state, PointerWorldPosition}, jjrs::PeerConfig, Player}}, frame::{increase_frame_system, FrameCount}, global_asset::{add_global_asset, loading_asset_system}, jjrs::{log_ggrs_events, setup_ggrs_local, start_matchbox_socket, wait_for_players, GggrsSessionConfiguration}, weapons::{bullet_rollback_system, system_weapon_position, weapon_inventory_system, weapon_rollback_system, weapons_config_update_system, Bullet, BulletRollbackState, WeaponInventory, WeaponPosition, WeaponState, WeaponsConfig}};
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Hash, States)]
 pub enum AppState {
@@ -32,6 +32,7 @@ impl Plugin for BaseZombieGamePlugin {
 
         app.add_plugins((
             RonAssetPlugin::<PlayerConfig>::new(&["ron"]),
+            RonAssetPlugin::<WeaponsConfig>::new(&["ron"]),
         ));
 
         app.add_plugins(InputManagerPlugin::<PlayerAction>::default());
@@ -60,7 +61,7 @@ impl Plugin for BaseZombieGamePlugin {
             app.add_systems(Update, wait_for_players.run_if(in_state(AppState::Lobby)));
             app.add_systems(Update, log_ggrs_events.run_if(in_state(AppState::InGame)));
         } else {
-            app.add_systems(Startup, setup_ggrs_local.after(add_global_asset));
+            app.add_systems(OnEnter(AppState::Lobby), setup_ggrs_local.after(add_global_asset));
         }
 
 
@@ -84,6 +85,9 @@ impl Plugin for BaseZombieGamePlugin {
                 // After each frame
                 increase_frame_system.after(update_animation_state)
             ));
-        app.add_systems(Update, weapon_inventory_system);
+        app.add_systems(Update, (
+            weapon_inventory_system,
+            weapons_config_update_system,
+        ));
     }
 }

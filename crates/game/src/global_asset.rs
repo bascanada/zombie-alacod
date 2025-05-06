@@ -2,7 +2,7 @@ use animation::{AnimationMapConfig, SpriteSheetConfig};
 use bevy::{prelude::*, utils::HashMap};
 use utils::bmap;
 
-use crate::{character::player::config::PlayerConfig, plugins::AppState};
+use crate::{character::player::config::PlayerConfig, plugins::AppState, weapons::WeaponsConfig};
 
 const PLAYER_SPRITESHEET_CONFIG_PATH: &str = "ZombieShooter/Sprites/Character/player_sheet.ron";
 const PLAYER_SHIRT_SPRITESHEET_CONFIG_PATH: &str = "ZombieShooter/Sprites/Character/shirt_1_sheet.ron";
@@ -16,6 +16,7 @@ pub struct GlobalAsset {
     pub spritesheets: HashMap<String, HashMap<String, Handle<SpriteSheetConfig>>>,
     pub animations: HashMap<String, Handle<AnimationMapConfig>>,
     pub player_configs: HashMap<String, Handle<PlayerConfig>>,
+    pub weapons: Handle<WeaponsConfig>,
 }
 
 impl GlobalAsset {
@@ -30,20 +31,16 @@ impl GlobalAsset {
                 ),
                 "weapon_1" => bmap!(
                     "body" => asset_server.load("ZombieShooter/Sprites/Character/weapon_sheet.ron")
-                ),
-                "pistol" => bmap!(
-                    "body" => asset_server.load("ZombieShooter/Sprites/Character/weapon_sheet.ron")
                 )
-
             ),
             animations: bmap!(
                 "player" => asset_server.load(PLAYER_ANIMATIONS_CONFIG_PATH),
-                "weapon_1" => asset_server.load(PLAYER_ANIMATIONS_CONFIG_PATH),
-                "pistol" => asset_server.load(PLAYER_ANIMATIONS_CONFIG_PATH)
+                "weapon_1" => asset_server.load(PLAYER_ANIMATIONS_CONFIG_PATH)
             ),
             player_configs: bmap!(
                 "player" => asset_server.load(PLAYER_CONFIG_PATH)
             ),
+            weapons: asset_server.load("ZombieShooter/Sprites/Character/weapons.ron")
         }
     }
 }
@@ -78,6 +75,10 @@ pub fn loading_asset_system(
         if !asset_server.load_state(handle).is_loaded() {
             return;
         }
+    }
+
+    if !asset_server.load_state(&global_assets.weapons).is_loaded() {
+        return;
     }
 
     app_state.set(AppState::Lobby);
