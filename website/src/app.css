@@ -23,8 +23,19 @@ body {
       radial-gradient(at 15% 06%, color-mix(in oklab, var(--color-success-500) 5%, transparent) 0px, transparent 30%);
 }
 
+html,
+body,
+/* If you have a specific mounting point like <div id="app"> in your app.html/index.html */
+#app { /* Or whatever your root Svelte element is */
+  height: 100%;
+  margin: 0; /* Good practice to remove default margins */
+  padding: 0; /* Good practice to remove default padding */
+}
+
 
 
 .font-metal-mania {
-  font-family: 'Metal Mania', cursive; /* 'cursive' or 'sans-serif' can be fallbacks */
+  font-family: 'Metal Mania', cursive;
 }
+
+
