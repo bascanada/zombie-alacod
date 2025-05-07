@@ -2,7 +2,7 @@ mod args;
 
 use animation::{toggle_layer, ActiveLayers, AnimationState, FacingDirection};
 use args::get_args;
-use bevy::{prelude::*, utils::hashbrown::HashMap, window::WindowResolution};
+use bevy::{asset::AssetMetaCheck, prelude::*, utils::hashbrown::HashMap, window::WindowResolution};
 use game::{character::{movement::Velocity, player::{config::{PlayerConfig, PlayerConfigHandles}, control::{get_input_map, PlayerAction}, LocalPlayer, Player}}, frame::FrameDebugUIPlugin, jjrs::{GggrsConnectionConfiguration, GggrsSessionConfiguration}, plugins::BaseZombieGamePlugin};
 
 use utils::{camera::tod::setup_camera, web::WebPlugin};
@@ -50,6 +50,10 @@ fn main() {
         .add_plugins(
             DefaultPlugins
                 .set(ImagePlugin::default_nearest())
+                .set(AssetPlugin {
+                    meta_check: AssetMetaCheck::Never,
+                    ..Default::default()
+                })
                 .set(window_plugin),
         )
         .add_plugins(WebPlugin{})
