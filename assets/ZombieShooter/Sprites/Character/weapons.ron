@@ -6,7 +6,7 @@
             firing_mode: Manual(),
             spread: 0.05,
             recoil: 3.0,
-            mag_size: 10,
+            mag_size: 10000,
             bullet_type: Standard(
                 damage: 15.0,
                 speed: 900.0,
@@ -15,8 +15,9 @@
             reload_time_seconds: 1.5,
         ),
         sprite_config: (
-            name: "weapon_1",
-            index: 2,
+            name: "pistol",
+            index: 3,
+            bullet_offset: ( 0.0, 2. )
         )
     ),
     "machine_gun": (
@@ -26,7 +27,7 @@
             firing_mode: Automatic(),
             spread: 0.15,
             recoil: 1.5,
-            mag_size: 30,
+            mag_size: 30000,
             bullet_type: Standard(
                 damage: 8.0,
                 speed: 1000.0,
@@ -35,8 +36,9 @@
             reload_time_seconds: 2.5,
         ),
         sprite_config: (
-            name: "weapon_1",
+            name: "machine_gun",
             index: 1,
+            bullet_offset: ( 17.0, 2.0 )
         )
     ),
     "shotgun": (
@@ -48,7 +50,7 @@
             ),
             spread: 0.3,
             recoil: 8.0,
-            mag_size: 5,
+            mag_size: 5000,
             bullet_type: Piercing(
                 damage: 10.0,
                 speed: 700.0,
@@ -58,8 +60,9 @@
             reload_time_seconds: 3.0,
         ),
         sprite_config: (
-            name: "weapon_1",
+            name: "shotgun",
             index: 0,
+            bullet_offset: ( 18.0, 1.5 )
         )
     ),
 })

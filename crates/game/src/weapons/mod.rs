@@ -54,6 +54,7 @@ pub struct WeaponConfig {
 pub struct WeaponSpriteConfig {
     pub name: String,
     pub index: usize,
+    pub bullet_offset: (f32, f32),
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -183,9 +184,6 @@ pub fn spawn_weapon_for_player(
 
     let entity = commands.spawn((
         Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)).with_rotation(Quat::IDENTITY),
-        WeaponPosition {
-            angle_offset: 0.0,
-        },
         weapon_state,
         weapon.clone(),
         animation_bundle
@@ -208,7 +206,8 @@ pub fn spawn_weapon_for_player(
 
 fn spawn_bullet_rollback(
     commands: &mut Commands,
-    position: Vec2,
+    weapon: &Weapon,
+    weapon_transform: &GlobalTransform,
     direction: Vec2,
     bullet_type: BulletType,
     damage: f32,
@@ -228,6 +227,11 @@ fn spawn_bullet_rollback(
         BulletType::Piercing { .. } => Color::BLACK,
     };
 
+    let firing_position = weapon_transform.transform_point(Vec3::new(weapon.sprite_config.bullet_offset.0, weapon.sprite_config.bullet_offset.1, 0.0));
+    let (_, weapon_world_rotation, _) = weapon_transform.affine().to_scale_rotation_translation();
+
+    let transform = Transform::from_translation(firing_position)
+            .with_rotation(weapon_world_rotation);
 
     commands.spawn((
         Sprite::from_color(color, Vec2::new(10.0, 10.0)),
@@ -241,10 +245,10 @@ fn spawn_bullet_rollback(
         },
         BulletRollbackState {
             spawn_frame: current_frame,
-            initial_position: position,
+            initial_position: firing_position.truncate(),
             direction,
         },
-        Transform::from_translation(Vec3::new(position.x , position.y, 5.0)),
+        transform,
     )).add_rollback().id()
 
 }
@@ -299,13 +303,13 @@ pub fn weapon_rollback_system(
     inputs: Res<PlayerInputs<PeerConfig>>,
     frame: Res<FrameCount>,
 
-    mut inventory_query: Query<(&mut WeaponInventory, &Player)>,
-    mut weapon_query: Query<(&mut Weapon, &mut WeaponState, &Transform, &Parent)>,
+    mut inventory_query: Query<(&mut WeaponInventory, &WeaponPosition, &Player)>,
+    mut weapon_query: Query<(&mut Weapon, &mut WeaponState, &GlobalTransform, &Parent)>,
 
     player_query: Query<(&GlobalTransform, &Player)>,
 ) {
     // Process weapon firing for all players
-    for (mut inventory, player) in inventory_query.iter_mut() {
+    for (mut inventory, weapon_position, player) in inventory_query.iter_mut() {
         let (input, _input_status) = inputs[player.handle];
 
         if input.switch_weapon && !inventory.weapons.is_empty() {
@@ -361,18 +365,18 @@ pub fn weapon_rollback_system(
                             input.pan_y as f32 / 127.0
                         ).normalize();
 
-                        let firing_position = player_transform.translation().truncate() + weapon_transform.translation.truncate();
-
                         // need to replace with fix seed random number
                         let spread_angle = (rand::random::<f32>() - 0.5)  * weapon.config.spread;
                         let spread_rotation = Mat2::from_angle(spread_angle);
                         let direction = spread_rotation * aim_dir;
 
+                        println!("angle offset of weapon {:?}", weapon_position.angle_offset);
 
                         // SPAWN BULLET
                         spawn_bullet_rollback(
                             &mut commands,
-                            firing_position,
+                            &weapon,
+                            weapon_transform,
                             direction,
                             weapon.config.bullet_type.clone(),
                             match &weapon.config.bullet_type {

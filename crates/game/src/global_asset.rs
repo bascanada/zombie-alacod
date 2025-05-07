@@ -29,13 +29,21 @@ impl GlobalAsset {
                     "hair" => asset_server.load(PLAYER_HAIR_SPRITESHEET_CONFIG_PATH),
                     "shadow" => asset_server.load("ZombieShooter/Sprites/Character/shadow_sheet.ron")
                 ),
-                "weapon_1" => bmap!(
-                    "body" => asset_server.load("ZombieShooter/Sprites/Character/weapon_sheet.ron")
+                "shotgun" => bmap!(
+                    "body" => asset_server.load("ZombieShooter/Sprites/Character/shotgun_sheet.ron")
+                ),
+                "pistol" => bmap!(
+                    "body" => asset_server.load("ZombieShooter/Sprites/Character/pistol_sheet.ron")
+                ),
+                "machine_gun" => bmap!(
+                    "body" => asset_server.load("ZombieShooter/Sprites/Character/machine_gun_sheet.ron")
                 )
             ),
             animations: bmap!(
                 "player" => asset_server.load(PLAYER_ANIMATIONS_CONFIG_PATH),
-                "weapon_1" => asset_server.load(PLAYER_ANIMATIONS_CONFIG_PATH)
+                "machine_gun" => asset_server.load(PLAYER_ANIMATIONS_CONFIG_PATH),
+                "pistol" => asset_server.load(PLAYER_ANIMATIONS_CONFIG_PATH),
+                "shotgun" => asset_server.load(PLAYER_ANIMATIONS_CONFIG_PATH)
             ),
             player_configs: bmap!(
                 "player" => asset_server.load(PLAYER_CONFIG_PATH)
