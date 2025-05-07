@@ -123,6 +123,16 @@ impl Default for FacingDirection {
     }
 }
 
+impl FacingDirection {
+    pub fn to_int(&self) -> i32 {
+        match self {
+            FacingDirection::Left => -1,
+            FacingDirection::Right => 1,
+        }
+    }
+    
+}
+
 // Bundle
 
 #[derive(Bundle)]

@@ -208,6 +208,7 @@ fn spawn_bullet_rollback(
     commands: &mut Commands,
     weapon: &Weapon,
     weapon_transform: &GlobalTransform,
+    facing_direction: &FacingDirection,
     direction: Vec2,
     bullet_type: BulletType,
     damage: f32,
@@ -227,11 +228,13 @@ fn spawn_bullet_rollback(
         BulletType::Piercing { .. } => Color::BLACK,
     };
 
-    let firing_position = weapon_transform.transform_point(Vec3::new(weapon.sprite_config.bullet_offset.0, weapon.sprite_config.bullet_offset.1, 0.0));
+    let quoeficient = facing_direction.to_int() as f32;
+    let firing_position = weapon_transform.transform_point(Vec3::new(weapon.sprite_config.bullet_offset.0 * quoeficient, weapon.sprite_config.bullet_offset.1, 0.0) );
     let (_, weapon_world_rotation, _) = weapon_transform.affine().to_scale_rotation_translation();
 
     let transform = Transform::from_translation(firing_position)
             .with_rotation(weapon_world_rotation);
+    
 
     commands.spawn((
         Sprite::from_color(color, Vec2::new(10.0, 10.0)),
@@ -306,7 +309,7 @@ pub fn weapon_rollback_system(
     mut inventory_query: Query<(&mut WeaponInventory, &WeaponPosition, &Player)>,
     mut weapon_query: Query<(&mut Weapon, &mut WeaponState, &GlobalTransform, &Parent)>,
 
-    player_query: Query<(&GlobalTransform, &Player)>,
+    player_query: Query<(&GlobalTransform, &FacingDirection, &Player)>,
 ) {
     // Process weapon firing for all players
     for (mut inventory, weapon_position, player) in inventory_query.iter_mut() {
@@ -359,7 +362,7 @@ pub fn weapon_rollback_system(
                 weapon_state.is_firing = true;
 
                 if can_fire {
-                    if let Ok((player_transform, _)) = player_query.get(**parent) {
+                    if let Ok((_, facing_direction, _)) = player_query.get(**parent) {
                         let aim_dir = Vec2::new(
                             input.pan_x as f32 / 127.0,
                             input.pan_y as f32 / 127.0
@@ -370,13 +373,12 @@ pub fn weapon_rollback_system(
                         let spread_rotation = Mat2::from_angle(spread_angle);
                         let direction = spread_rotation * aim_dir;
 
-                        println!("angle offset of weapon {:?}", weapon_position.angle_offset);
-
                         // SPAWN BULLET
                         spawn_bullet_rollback(
                             &mut commands,
                             &weapon,
                             weapon_transform,
+                            facing_direction,
                             direction,
                             weapon.config.bullet_type.clone(),
                             match &weapon.config.bullet_type {
