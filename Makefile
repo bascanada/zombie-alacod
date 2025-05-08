@@ -93,24 +93,21 @@ host_website:
 # Build
 
 cp_asset:
-	cp -r ./assets ./website/
+	cp -r ./assets ./website/static/
 
 build_docker_matchbox_server:
 	docker build -f ./crates/matchbox_server/Dockerfile ./crates/matchbox_server/ -t ghcr.io/bascanada/matchbox_server:latest
 
 build_map_preview_web:
 	cargo build --example map_preview --target wasm32-unknown-unknown --features bevy_ecs_tilemap/atlas $(RELEASE)
-	wasm-bindgen --out-dir ./website/map_preview --out-name wasm --target web $(CARGO_TARGET_DIR)/wasm32-unknown-unknown/$(MODE_DIR)/examples/map_preview.wasm
+	wasm-bindgen --out-dir ./website/static/map_preview --out-name wasm --target web $(CARGO_TARGET_DIR)/wasm32-unknown-unknown/$(MODE_DIR)/examples/map_preview.wasm
 
 build_character_tester_web:
 	cargo build --example character_tester --target wasm32-unknown-unknown $(RELEASE)
-	wasm-bindgen --out-dir ./website/character_tester --out-name wasm --target web $(CARGO_TARGET_DIR)/wasm32-unknown-unknown/$(MODE_DIR)/examples/character_tester.wasm
+	wasm-bindgen --out-dir ./website/static/character_tester --out-name wasm --target web $(CARGO_TARGET_DIR)/wasm32-unknown-unknown/$(MODE_DIR)/examples/character_tester.wasm
 
 build_website: cp_asset build_map_preview_web build_character_tester_web
-	echo "const CACHE_NAME = 'wasm-app-cache-$(date +%s)';" > website/cache-version.js
-
-build_docker_website: build_website
-	docker build -f ./website/Dockerfile ./websites -t ghcr.io/bascanada/zombie-alacod:latest
+	echo "const CACHE_NAME = 'wasm-app-cache-$(date +%s)';" > website/static/cache-version.js
 
 build_docker_website: build_website
 	docker build -f ./website/Dockerfile ./website -t ghcr.io/bascanada/zombie-alacod:latest

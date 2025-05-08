@@ -2,12 +2,14 @@ name: Publish to GitHub Pages
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - 'v*'
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Check out
         uses: actions/checkout@v4
@@ -33,13 +35,21 @@ jobs:
         run: sudo apt-get install g++ make pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0 libwayland-dev libxkbcommon-dev && rustup component add rustfmt
       - name: Dependencies
         run: cargo vendor && (make dep_web || echo "ok")
+      - name: Set APP_VERSION from tag
+        run: echo "APP_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
       - name: Build docker matchbox
         run: make build_docker_matchbox_server
       - name: Build web
-        run: make build_docker_website TARGET=web PROFILE=prod
+        run: APP_VERSION=${{ github.ref_name }} make build_docker_website TARGET=web PROFILE=prod
       - name: Publish docker matchbox
         run: make push_docker_matchbox_server
       - name: Publish docker website
         run: make push_docker_website
       - name: Update deployment
         run: doctl apps create-deployment 12321cca-c9b1-4e19-9961-3d5ebc8ff12a && doctl apps create-deployment a5542b50-f1f1-4b33-9fe6-f96cae8ff8cb
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }} # This is the standard token for GitHub API actions
+        with:
+          generate_release_notes: true

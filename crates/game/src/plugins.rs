@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{asset::AssetMetaCheck, prelude::*};
 use bevy_ggrs::{prelude::*, GgrsSchedule};
 use leafwing_input_manager::plugin::InputManagerPlugin;
 use std::hash::Hash;
