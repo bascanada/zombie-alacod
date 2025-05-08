@@ -40,7 +40,7 @@ jobs:
       - name: Build docker matchbox
         run: make build_docker_matchbox_server
       - name: Build web
-        run: make build_docker_website TARGET=web PROFILE=prod
+        run: APP_VERSION=${{ github.ref_name }} make build_docker_website TARGET=web PROFILE=prod
       - name: Publish docker matchbox
         run: make push_docker_matchbox_server
       - name: Publish docker website
