@@ -1,0 +1,64 @@
+name: PR 
+
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+env: 
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+            target_wasm/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Dependency
+        run: sudo apt-get install g++ make pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0 libwayland-dev libxkbcommon-dev && rustup component add rustfmt
+      - name: Dependencies
+        run: cargo vendor && (make dep_web || echo "ok")
+      - name: Generate version number
+        id: generate_version
+        run: |
+          # Get the latest tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          
+          # Get the short SHA
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          
+          # Combine them for the version
+          VERSION="${LATEST_TAG}-${SHORT_SHA}"
+          
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          
+          echo "Generated version: $VERSION" 
+      - name: Test
+        run: make test
+      - name: Style Check
+        run: make format
+      - name: Build web
+        run:  APP_VERSION="${{ env.VERSION }}" make build_website TARGET=web PROFILE=prod
+      - name: Build matchbox
+        run: make build_docker_matchbox_server 

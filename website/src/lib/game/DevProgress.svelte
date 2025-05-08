@@ -15,7 +15,8 @@
     $: progressPercentage = calculateProgress(currentVersion, releaseVersion);
     
     function calculateProgress(current: string, target: string): number {
-        const currentParts = current.split('.').map(Number);
+        let currentSanitize = current.split("-")[0];
+        const currentParts = currentSanitize.split('.').map(Number);
         const targetParts = target.split('.').map(Number);
         
         // Simple calculation based on major.minor.patch

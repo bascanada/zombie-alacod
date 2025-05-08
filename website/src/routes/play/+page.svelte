@@ -13,7 +13,7 @@
 
 <script lang="ts">
     import { onMount } from 'svelte';
-	import { settingsStore } from '../settings/settingsStore';
+	  import { settingsStore } from '../settings/settingsStore';
 
 
     let src = "";
@@ -38,6 +38,8 @@
             });
 
             return () => unsubscribe();
+        } else {
+          src = `/loader.html?name=${id}&lobby=test`;
         }
     });
 </script>
