@@ -27,6 +27,14 @@ jobs:
             target/
             target_wasm/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Login docker
+        run: docker login https://ghcr.io -u wquintal -p $GITHUB_ACCESS_TOKEN
+        env:
+          GITHUB_ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }} 
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
       - name: Dependency
         run: sudo apt-get install g++ make pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0 libwayland-dev libxkbcommon-dev && rustup component add rustfmt
       - name: Dependencies
