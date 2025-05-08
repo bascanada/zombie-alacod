@@ -86,7 +86,7 @@
     }
   /* Ensure consistent heights */
   .card {
-    min-width: 300px;
+    min-width: 400px;
   }
   .card article {
     display: flex;
