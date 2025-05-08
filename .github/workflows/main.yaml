@@ -60,7 +60,7 @@ jobs:
       - name: Style Check
         run: make format
       - name: Build web
-        run:  APP_VERSION="${{ env.VERSION }}" make build_website TARGET=web PROFILE=prod
+        run:  APP_VERSION="${{ env.VERSION }}" make build_docker_website TARGET=web PROFILE=prod
       - name: Build matchbox
         run: make build_docker_matchbox_server 
       - name: Publish docker matchbox
