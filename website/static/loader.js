@@ -1,13 +1,16 @@
 document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
-    const online = urlParams.get("online");
+    const matchbox = urlParams.get("matchbox");
+    const lobby_size = urlParams.get("lobby_size");
     const lobby = urlParams.get("lobby");
     const name = "./" + urlParams.get("name") + "/wasm.js";
 
-    if (online === "true") {
+    if (matchbox && matchbox.length > 0) {
       let canvas = document.getElementById("bevy-canvas");
-      canvas.setAttribute("data-matchbox", "wss://matchbox.bascanada.org");
-      canvas.setAttribute("data-number-player", "2");
+      canvas.setAttribute("data-matchbox", matchbox);
+      canvas.setAttribute("data-number-player", lobby_size || 2);
+
+      console.log("MATCHBOX " + matchbox + " NUMBER " + lobby_size + " LOBBY " + lobby);
     }
 
     import(name).then((module) => {

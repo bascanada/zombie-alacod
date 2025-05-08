@@ -1,8 +1,12 @@
 <script lang="ts">
   	import { Navigation } from '@skeletonlabs/skeleton-svelte';
-    import { House, Gamepad, Settings } from '@lucide/svelte/icons';
+    import { House, Settings, ToiletIcon, Gamepad2 } from '@lucide/svelte/icons';
+    import { Toaster } from '@skeletonlabs/skeleton-svelte';
+    import { toaster } from '$lib/toaster';
 
   	import '../app.css';
+	  import CurrentVersion from '$lib/game/CurrentVersion.svelte';
+
 	  let { children } = $props();
 </script>
 
@@ -11,10 +15,12 @@
     <Navigation.Rail>
         {#snippet header()}
           <Navigation.Tile label="" href="/"><img class="logo" src="/icons/android-chrome-192x192.png" alt="logo" /></Navigation.Tile>
+          <CurrentVersion></CurrentVersion>
         {/snippet}
         {#snippet tiles()}
           <Navigation.Tile label="Home" href="/"><House /></Navigation.Tile>
-          <Navigation.Tile label="Game" href="/game"><Gamepad /></Navigation.Tile>
+          <Navigation.Tile label="Blog" href="/blog"><House /></Navigation.Tile>
+          <Navigation.Tile label="Tools" href="/tools"><ToiletIcon /></Navigation.Tile>
         {/snippet}
 
         {#snippet footer()}
@@ -23,13 +29,11 @@
     </Navigation.Rail>
   </div>
 
-  <div class="h-full w-full flex flex-col">
-    <div class="card border-surface-100-900 grid w-full grid-rows-[auto_1fr]">
-        {@render children()}
-    </div>
-  </div>
+  {@render children()}
 
 </div>
+
+<Toaster {toaster}></Toaster>
 
 <style>
   .logo {
