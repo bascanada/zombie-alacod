@@ -60,8 +60,10 @@ pub fn create_player(
 
 
     if let Some(weapons_config) = weapons_asset.get(&global_assets.weapons) {
-        for (i, (_, v)) in weapons_config.0.iter().enumerate() {
-            spawn_weapon_for_player(commands, global_assets, i == 0, entity, v.clone(), &mut inventory);
+        let mut keys: Vec<&String> = weapons_config.0.keys().collect();
+        keys.sort();
+        for (i, k) in keys.iter().enumerate() {
+            spawn_weapon_for_player(commands, global_assets, i == 0, entity, weapons_config.0.get(*k).unwrap().clone(), &mut inventory);
         }
     } else {
         println!("NO ASSET FOR WEAPONS");
