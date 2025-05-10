@@ -54,7 +54,8 @@ pub struct WeaponConfig {
 pub struct WeaponSpriteConfig {
     pub name: String,
     pub index: usize,
-    pub bullet_offset: (f32, f32),
+    pub bullet_offset_left: (f32, f32),
+    pub bullet_offset_right: (f32, f32),
 }
 
 #[derive(Serialize, Deserialize, Clone)]
