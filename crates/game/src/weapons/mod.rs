@@ -229,8 +229,12 @@ fn spawn_bullet_rollback(
         BulletType::Piercing { .. } => Color::BLACK,
     };
 
-    let quoeficient = facing_direction.to_int() as f32;
-    let firing_position = weapon_transform.transform_point(Vec3::new(weapon.sprite_config.bullet_offset.0 * quoeficient, weapon.sprite_config.bullet_offset.1, 0.0) );
+    let firing_position = if matches!(facing_direction, FacingDirection::Right) {
+        Vec3::new(weapon.sprite_config.bullet_offset_right.0, weapon.sprite_config.bullet_offset_right.1, 0.0) 
+    } else {
+        Vec3::new(weapon.sprite_config.bullet_offset_left.0, weapon.sprite_config.bullet_offset_left.1, 0.0) 
+    };
+    let firing_position = weapon_transform.transform_point(firing_position);
     let (_, weapon_world_rotation, _) = weapon_transform.affine().to_scale_rotation_translation();
 
     let transform = Transform::from_translation(firing_position)
