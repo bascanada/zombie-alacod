@@ -1,9 +1,43 @@
-use bevy::{prelude::*, reflect::TypePath, utils::HashMap};
+use bevy::{prelude::*, reflect::TypePath, sprite::Anchor, utils::HashMap};
 use bevy_ggrs::{prelude::*, GgrsSchedule};
 use bevy_common_assets::ron::RonAssetPlugin;
 use serde::Deserialize;
 
 // CONFIG
+
+// 1a. Define your custom enum that CAN be deserialized
+#[derive(Deserialize, Debug, Clone, Copy)]
+#[serde(rename_all = "PascalCase")] // Allows "BottomCenter" in RON file
+pub enum ConfigurableAnchor {
+    Center,
+    BottomLeft,
+    BottomCenter,
+    BottomRight,
+    CenterLeft,
+    CenterRight,
+    TopLeft,
+    TopCenter,
+    TopRight,
+    // Add Custom(Vec2) if you need it, requires slightly more complex mapping
+}
+
+impl ConfigurableAnchor {
+
+    pub fn to_anchor(&self) -> Anchor {
+         return match self {
+             ConfigurableAnchor::Center => Anchor::Center,
+             ConfigurableAnchor::BottomLeft => Anchor::BottomLeft,
+             ConfigurableAnchor::BottomCenter => Anchor::BottomCenter,
+             ConfigurableAnchor::BottomRight => Anchor::BottomRight,
+             ConfigurableAnchor::CenterLeft => Anchor::CenterLeft,
+             ConfigurableAnchor::CenterRight => Anchor::CenterRight,
+             ConfigurableAnchor::TopLeft => Anchor::TopLeft,
+             ConfigurableAnchor::TopCenter => Anchor::TopCenter,
+             ConfigurableAnchor::TopRight => Anchor::TopRight,
+             // Add Custom case here if you defined it
+         };
+    }
+}
 
 // -- Sprite Sheet Layout Configuration --
 #[derive(Asset, TypePath, Deserialize, Debug, Clone)]
@@ -13,10 +47,12 @@ pub struct SpriteSheetConfig {
     pub columns: u32,
     pub rows: u32,
     pub name: String,
+    pub scale: f32,
     pub offset_x: f32,
     pub offset_y: f32,
     pub offset_z: f32,
     pub animated: bool,
+    pub anchor: ConfigurableAnchor,
 }
 
 
@@ -67,6 +103,7 @@ pub struct AnimationState(pub String);
 pub struct CharacterAnimationHandles {
     pub spritesheets: HashMap<String, Handle<SpriteSheetConfig>>,
     pub animations: Handle<AnimationMapConfig>,
+    pub starting_index: usize
 }
 
 #[derive(Component)]
@@ -86,6 +123,16 @@ impl Default for FacingDirection {
     }
 }
 
+impl FacingDirection {
+    pub fn to_int(&self) -> i32 {
+        match self {
+            FacingDirection::Left => -1,
+            FacingDirection::Right => 1,
+        }
+    }
+    
+}
+
 // Bundle
 
 #[derive(Bundle)]
@@ -103,6 +150,8 @@ impl AnimationBundle {
         spritesheets: HashMap<String, Handle<SpriteSheetConfig>>,
         animations: Handle<AnimationMapConfig>,
 
+        starting_index: usize,
+
         starting_layers: HashMap<String, String>,
     ) -> Self {
         Self {
@@ -113,6 +162,7 @@ impl AnimationBundle {
             handles: CharacterAnimationHandles {
                 spritesheets,
                 animations,
+                starting_index,
             },
             loading_asset: LoadingAsset {
                 layers: starting_layers,
@@ -254,12 +304,14 @@ fn character_visuals_update_system(
                                     if layer_name.name == new_config.name {
                                         sprite.texture_atlas = Some(TextureAtlas {
                                             layout: texture_atlas_layouts.add(new_layout.clone()),
-                                            index: 0,
+                                            index: config_handle.starting_index,
                                         });
                                         transform.translation.x = new_config.offset_x;
                                         transform.translation.z = new_config.offset_z;
                                         transform.translation.y = new_config.offset_y;
+                                        transform.scale = Vec3::splat(new_config.scale);
                                         sprite.image = asset_server.load(&new_config.path);
+                                        sprite.anchor = new_config.anchor.to_anchor();
                                     }
                                 }
                             }
@@ -290,7 +342,7 @@ pub fn character_visuals_spawn_system(
         let mut loaded_items = vec![];
 
 
-        let mut current_frame_index = 0;
+        let mut current_frame_index = config_handles.starting_index;
         
         // Try to determine the current animation frame from existing sprites
         if let Ok(children) = child_query.get(entity) {
@@ -338,14 +390,19 @@ pub fn character_visuals_spawn_system(
                                     layout: layout_handle.clone(),
                                     index: current_frame_index,
                                 }),
+                                anchor: spritesheet_config.anchor.to_anchor(),
                                 ..default()
                             },
-                            Transform::from_xyz(spritesheet_config.offset_x, spritesheet_config.offset_y, spritesheet_config.offset_z),
+                            Transform::from_scale(Vec3::splat(spritesheet_config.scale))
+                                .with_translation(Vec3::new(spritesheet_config.offset_x, spritesheet_config.offset_y, spritesheet_config.offset_z)),
+                                //.with_rotation(Quat::IDENTITY),
                             LayerName { name: spritesheet_config.name.clone() },
                         ));
 
                         if spritesheet_config.animated {
                             entity_commands.insert(AnimatedLayer{});
+                        } else {
+                            println!("adding non animation layer {}", spritesheet_config.path);
                         }
 
                         let sprite = entity_commands.id();

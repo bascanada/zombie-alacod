@@ -5,7 +5,7 @@ use bevy_ggrs::{ggrs::PlayerType, prelude::*};
 use bevy_matchbox::{prelude::PeerState, MatchboxSocket};
 use ggrs::UdpNonBlockingSocket;
 
-use crate::{character::player::{create::create_player, jjrs::PeerConfig}, global_asset::GlobalAsset, plugins::AppState};
+use crate::{character::player::{create::create_player, jjrs::PeerConfig}, global_asset::GlobalAsset, plugins::AppState, weapons::{WeaponAsset, WeaponsConfig}};
 
 pub struct GggrsConnectionConfiguration {
     pub max_player: usize,
@@ -31,6 +31,7 @@ pub fn setup_ggrs_local(
     mut app_state: ResMut<NextState<AppState>>,
     mut commands: Commands,
     global_assets: Res<GlobalAsset>,
+    weapons_asset: Res<Assets<WeaponsConfig>>,
     session_config: Res<GggrsSessionConfiguration>,
 ) {
     let mut sess_build = SessionBuilder::<PeerConfig>::new()
@@ -48,7 +49,7 @@ pub fn setup_ggrs_local(
             let remote_addr: SocketAddr = addr.parse().unwrap();
             //sess_build = sess_build.add_player(PlayerType::Remote(remote_addr), i).expect("Failed to add player");
         }
-        create_player(&mut commands, &global_assets, local, i);
+        create_player(&mut commands, &weapons_asset, &global_assets, local, i);
     }
 
     // Start a synctest session
@@ -86,7 +87,7 @@ pub fn start_matchbox_socket(mut commands: Commands, ggrs_config: Res<GggrsSessi
 pub fn wait_for_players(
     mut app_state: ResMut<NextState<AppState>>,
 
-    mut commands: Commands, global_assets: Res<GlobalAsset>, mut socket: ResMut<MatchboxSocket>, ggrs_config: Res<GggrsSessionConfiguration>
+    mut commands: Commands, global_assets: Res<GlobalAsset>, weapons_asset: Res<Assets<WeaponsConfig>>, mut socket: ResMut<MatchboxSocket>, ggrs_config: Res<GggrsSessionConfiguration>
 ) {
     // regularly call update_peers to update the list of connected peers
     let Ok(peer_changes) = socket.try_update_peers() else {
@@ -125,7 +126,7 @@ pub fn wait_for_players(
             .expect("failed to add player");
 
         
-        create_player(&mut commands, &global_assets, matches!(player, PlayerType::Local), i);
+        create_player(&mut commands, &weapons_asset, &global_assets, matches!(player, PlayerType::Local), i);
     }
 
     // move the channel out of the socket (required because GGRS takes ownership of it)

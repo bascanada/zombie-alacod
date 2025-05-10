@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{input::keyboard::Key, prelude::*};
 use leafwing_input_manager::prelude::*;
 
 // === Leafwing Input Actions ===
@@ -13,6 +13,8 @@ pub enum PlayerAction {
     MoveRight,
 
     Interaction,
+
+    SwitchWeapon,
 
     PointerPosition,
     PointerClick,
@@ -29,7 +31,8 @@ pub fn get_input_map() -> InputMap<PlayerAction> {
         (PlayerAction::MoveLeft, KeyCode::ArrowLeft),
         (PlayerAction::MoveRight, KeyCode::KeyD),
         (PlayerAction::MoveRight, KeyCode::ArrowRight),
-        (PlayerAction::Interaction, KeyCode::KeyH)
+        (PlayerAction::Interaction, KeyCode::KeyH),
+        (PlayerAction::SwitchWeapon, KeyCode::Tab),
     ]);
     // Add gamepad support if needed
     map.insert(PlayerAction::MoveUp, GamepadButton::DPadUp);
@@ -38,6 +41,7 @@ pub fn get_input_map() -> InputMap<PlayerAction> {
     map.insert(PlayerAction::MoveRight, GamepadButton::DPadRight);
     map.insert(PlayerAction::Interaction, GamepadButton::North);
     // Add more bindings...
+    map.insert(PlayerAction::PointerClick, MouseButton::Left);
 
     map.with_dual_axis(PlayerAction::Pan, GamepadStick::LEFT)
 

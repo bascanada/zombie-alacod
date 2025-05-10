@@ -4,13 +4,14 @@ use bevy::{prelude::*, utils:: HashMap};
 use leafwing_input_manager::{prelude::ActionState, InputManagerBundle};
 use utils::bmap;
 
-use crate::{character::movement::Velocity, global_asset::GlobalAsset};
+use crate::{character::movement::Velocity, global_asset::GlobalAsset, weapons::{spawn_weapon_for_player, FiringMode, Weapon, WeaponInventory, WeaponPosition, WeaponsConfig}};
 
 use bevy_ggrs::AddRollbackCommandExtension;
 use super::{config::{PlayerConfig, PlayerConfigHandles}, control::{get_input_map, PlayerAction}, LocalPlayer, Player};
 
 pub fn create_player(
     commands: &mut Commands,
+    weapons_asset: &Res<Assets<WeaponsConfig>>,
     global_assets: &Res<GlobalAsset>,
 
     local: bool,
@@ -28,7 +29,7 @@ pub fn create_player(
     };
 
     let animation_bundle =
-        AnimationBundle::new(map_layers, animation_handle.clone(), starting_layer);
+        AnimationBundle::new(map_layers, animation_handle.clone(),0, starting_layer);
 
     let mut entity = commands.spawn((
         Transform::from_scale(Vec3::splat(6.0)).with_translation(Vec3::new(-50.0 * handle as f32, 0.0, 0.0)),
@@ -52,6 +53,24 @@ pub fn create_player(
 
         info!("Adding local player with input {}", handle);
     }
+    
+    let entity = entity.add_rollback().id();
 
-    entity.add_rollback();
+    let mut inventory = WeaponInventory::default();
+
+
+    if let Some(weapons_config) = weapons_asset.get(&global_assets.weapons) {
+        for (i, (_, v)) in weapons_config.0.iter().enumerate() {
+            spawn_weapon_for_player(commands, global_assets, i == 0, entity, v.clone(), &mut inventory);
+        }
+    } else {
+        println!("NO ASSET FOR WEAPONS");
+    }
+
+    commands.entity(entity)
+        .insert((
+            inventory,
+            WeaponPosition::default(),
+        ));
+
 }

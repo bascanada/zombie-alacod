@@ -7,7 +7,11 @@
     animated: true,
     name: "body",
 
-    offset_x: 20.0,
+    scale: 1.0,
+
+    anchor: Center,
+
+    offset_x: 0.0,
     offset_y: 0.0,
     offset_z: 1.0,
 
