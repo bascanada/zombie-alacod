@@ -21,6 +21,7 @@ const INPUT_UP: u16 = 1 << 0;
 const INPUT_DOWN: u16 = 1 << 1;
 const INPUT_LEFT: u16 = 1 << 2;
 const INPUT_RIGHT: u16 = 1 << 3;
+pub const INPUT_RELOAD: u16 = 1 << 4;
 
 const PAN_FACING_THRESHOLD: i16 = 5;
 
@@ -32,7 +33,6 @@ pub struct BoxInput{
     pub pan_y: i16,
 
     pub fire: bool,
-    pub reloading: bool,
     pub switch_weapon: bool,
 }
 
@@ -97,10 +97,11 @@ pub fn read_local_inputs(
          if action_state.pressed(&PlayerAction::SwitchWeapon) {
             input.switch_weapon = true;
          }
-        
-        if action_state.pressed(&PlayerAction::Reload) {
-            input.reloading = true;
-        }
+         if action_state.pressed(&PlayerAction::Reload) {
+            input.buttons |= INPUT_RELOAD;
+         }
+
+
 
         if let Ok(window) = q_window.get_single() {
             if let Ok((camera, camera_transform)) = q_camera.get_single() {

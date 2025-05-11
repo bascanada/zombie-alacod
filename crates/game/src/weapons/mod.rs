@@ -7,7 +7,7 @@ use ggrs::PlayerHandle;
 use serde::{Deserialize, Serialize};
 use utils::{bmap, rng::RollbackRng};
 
-use crate::{character::player::{input::CursorPosition, jjrs::{BoxConfig, PeerConfig}, Player}, frame::FrameCount, global_asset::GlobalAsset};
+use crate::{character::player::{input::{CursorPosition, INPUT_RELOAD}, jjrs::{BoxConfig, PeerConfig}, Player}, frame::FrameCount, global_asset::GlobalAsset};
 
 // ROOLBACL
 
@@ -449,7 +449,7 @@ pub fn weapon_rollback_system(
                 } else {
                     continue;
                 }
-            } else if input.reloading && !weapon_mode_state.is_mag_full() {
+            } else if input.buttons & INPUT_RELOAD != 0  && !weapon_mode_state.is_mag_full() {
                 inventory.is_reloading = true;
                 weapon_state.start_reload(frame.frame, weapon_config.reload_time_seconds);
                 continue;
@@ -467,8 +467,6 @@ pub fn weapon_rollback_system(
                     continue;
                 }
             }
-
-
 
             if input.fire {
                 // Calculate fire rate in frames (60 FPS assumed) , need to be configure via ressource instead
