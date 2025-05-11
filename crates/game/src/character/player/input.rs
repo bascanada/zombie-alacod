@@ -105,8 +105,8 @@ pub fn read_local_inputs(
                         let player_position = transform.translation.truncate();
                         let pointer_distance = world_position - player_position;
 
-                        input.pan_x = (pointer_distance.x * 100.0).round().clamp(i16::MIN as f32, i16::MAX as f32) as i16;
-                        input.pan_y = (pointer_distance.y * 100.0).round().clamp(i16::MIN as f32, i16::MAX as f32) as i16;
+                        input.pan_x = (pointer_distance.x).round().clamp(i16::MIN as f32, i16::MAX as f32) as i16;
+                        input.pan_y = (pointer_distance.y).round().clamp(i16::MIN as f32, i16::MAX as f32) as i16;
                     }
                 }
             }

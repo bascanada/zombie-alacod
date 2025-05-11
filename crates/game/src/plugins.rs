@@ -1,7 +1,6 @@
 use bevy::{asset::AssetMetaCheck, prelude::*};
 use bevy_ggrs::{prelude::*, GgrsSchedule};
 use leafwing_input_manager::plugin::InputManagerPlugin;
-use utils::rollback::system_setup_rng;
 use std::hash::Hash;
 use bevy_common_assets::ron::RonAssetPlugin;
 
@@ -57,7 +56,6 @@ impl Plugin for BaseZombieGamePlugin {
             .rollback_component_with_reflect::<Player>();
 
         app.add_systems(Startup, add_global_asset);
-        app.add_systems(OnEnter(AppState::InGame), system_setup_rng);
         app.add_systems(Update, loading_asset_system.run_if(in_state(AppState::Loading)));
         
 

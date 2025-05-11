@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use bevy_ggrs::{ggrs::PlayerType, prelude::*};
 use bevy_matchbox::{prelude::PeerState, MatchboxSocket};
 use ggrs::UdpNonBlockingSocket;
+use utils::rng::RollbackRng;
 
 use crate::{character::player::{create::create_player, jjrs::PeerConfig}, global_asset::GlobalAsset, plugins::AppState, weapons::{WeaponAsset, WeaponsConfig}};
 
@@ -34,6 +35,8 @@ pub fn setup_ggrs_local(
     weapons_asset: Res<Assets<WeaponsConfig>>,
     session_config: Res<GggrsSessionConfiguration>,
 ) {
+
+
     let mut sess_build = SessionBuilder::<PeerConfig>::new()
         .with_num_players(session_config.connection.max_player)
         .with_desync_detection_mode(ggrs::DesyncDetection::On { interval: session_config.connection.desync_interval })
@@ -68,6 +71,7 @@ pub fn setup_ggrs_local(
     };
 
     // Insert the GGRS session resource
+    commands.insert_resource(RollbackRng::new(12345));
     commands.insert_resource(sess);
 
     app_state.set(AppState::InGame);
@@ -138,6 +142,7 @@ pub fn wait_for_players(
         .expect("failed to start session");
 
 
+    commands.insert_resource(RollbackRng::new(12345));
     commands.insert_resource(bevy_ggrs::Session::P2P(ggrs_session));
 
     app_state.set(AppState::InGame);

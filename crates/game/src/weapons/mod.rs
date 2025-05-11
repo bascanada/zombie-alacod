@@ -3,7 +3,7 @@ use bevy::{prelude::*, sprite::Anchor, utils::HashMap};
 use bevy_ggrs::{AddRollbackCommandExtension, PlayerInputs, Rollback};
 use ggrs::PlayerHandle;
 use serde::{Deserialize, Serialize};
-use utils::{bmap, rollback::{calculate_deterministic_spread_direction, to_f32, DeterministicRng, RVec2, Xorshift32Rng, R32}};
+use utils::{bmap, rng::RollbackRng};
 
 use crate::{character::player::{input::CursorPosition, jjrs::{BoxConfig, PeerConfig}, Player}, frame::FrameCount, global_asset::GlobalAsset};
 
@@ -32,31 +32,31 @@ pub enum MagBulletConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum BulletType {
     Standard {
-        damage: R32,
-        speed: R32,
+        damage: f32,
+        speed: f32,
     },
     Explosive {
-        damage: R32,
-        speed: R32,
-        blast_radius: R32,
+        damage: f32,
+        speed: f32,
+        blast_radius: f32,
     },
     Piercing {
-        damage: R32,
-        speed: R32,
+        damage: f32,
+        speed: f32,
         penetration: u8,
     },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct FiringModeConfig {
-    pub firing_rate: R32,
+    pub firing_rate: f32,
     pub firing_mode: FiringMode,
-    pub spread: R32,
-    pub recoil: R32,
+    pub spread: f32,
+    pub recoil: f32,
     pub bullet_type: BulletType,
-    pub range: R32,
+    pub range: f32,
 
-    pub reload_time_seconds: R32,
+    pub reload_time_seconds: f32,
     pub mag: MagBulletConfig,
 }
 
@@ -73,8 +73,8 @@ pub struct WeaponConfig {
 pub struct WeaponSpriteConfig {
     pub name: String,
     pub index: usize,
-    pub bullet_offset_left: RVec2,
-    pub bullet_offset_right: RVec2,
+    pub bullet_offset_left: Vec2,
+    pub bullet_offset_right: Vec2,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -105,11 +105,11 @@ pub struct ActiveWeapon;
 /// Component for bullets
 #[derive(Component, Clone)]
 pub struct Bullet {
-    pub velocity: RVec2,
+    pub velocity: Vec2,
     pub bullet_type: BulletType,
-    pub damage: R32,
-    pub range: R32,
-    pub distance_traveled: R32,
+    pub damage: f32,
+    pub range: f32,
+    pub distance_traveled: f32,
     pub player_handle: PlayerHandle,
 }
 
@@ -161,8 +161,8 @@ pub struct WeaponState {
 #[derive(Component, Clone)]
 pub struct BulletRollbackState {
     spawn_frame: u32,
-    initial_position: RVec2,
-    direction: RVec2,
+    initial_position: Vec2,
+    direction: Vec2,
 }
 
 #[derive(Event)]
@@ -246,17 +246,17 @@ fn spawn_bullet_rollback(
     weapon: &Weapon,
     weapon_transform: &GlobalTransform,
     facing_direction: &FacingDirection,
-    direction: RVec2,
+    direction: Vec2,
     bullet_type: BulletType,
-    damage: R32,
-    range: R32,
+    damage: f32,
+    range: f32,
     player_handle: PlayerHandle,
     current_frame: u32,
 ) -> Entity {
     let speed = match &bullet_type {
-        BulletType::Standard { speed, .. } => *speed / 60, // Convert to per-frame speed
-        BulletType::Explosive { speed, .. } => *speed / 60,
-        BulletType::Piercing { speed, .. } => *speed / 60,
+        BulletType::Standard { speed, .. } => *speed / 60., // Convert to per-frame speed
+        BulletType::Explosive { speed, .. } => *speed / 60.,
+        BulletType::Piercing { speed, .. } => *speed / 60.,
     };
 
     let color = match &bullet_type {
@@ -265,12 +265,12 @@ fn spawn_bullet_rollback(
         BulletType::Piercing { .. } => Color::BLACK,
     };
 
-    let r_firing_position = if matches!(facing_direction, FacingDirection::Right) {
+    let firing_position_v2 = if matches!(facing_direction, FacingDirection::Right) {
         weapon.sprite_config.bullet_offset_right
     } else {
         weapon.sprite_config.bullet_offset_left
     };
-    let firing_position = weapon_transform.transform_point(r_firing_position.into());
+    let firing_position = weapon_transform.transform_point(firing_position_v2.extend(0.));
     let (_, weapon_world_rotation, _) = weapon_transform.affine().to_scale_rotation_translation();
 
     let transform = Transform::from_translation(firing_position)
@@ -284,12 +284,12 @@ fn spawn_bullet_rollback(
             bullet_type,
             damage,
             range,
-            distance_traveled: 0,
+            distance_traveled: 0.,
             player_handle,
         },
         BulletRollbackState {
             spawn_frame: current_frame,
-            initial_position: r_firing_position,
+            initial_position: firing_position_v2,
             direction,
         },
         transform,
@@ -337,7 +337,7 @@ pub fn system_weapon_position(
 // rollback system for weapon action , firing and all
 pub fn weapon_rollback_system(
     mut commands: Commands,
-    mut rng: ResMut<Xorshift32Rng>,
+    mut rng: ResMut<RollbackRng>,
     inputs: Res<PlayerInputs<PeerConfig>>,
     frame: Res<FrameCount>,
 
@@ -373,7 +373,7 @@ pub fn weapon_rollback_system(
             let weapon_mode_state = weapon_modes_state.modes.get_mut(&active_mode).unwrap();
             if input.fire {
                 // Calculate fire rate in frames (60 FPS assumed) , need to be configure via ressource instead
-                let frame_per_shot = ((60 / weapon_config.firing_rate) / 100) as u32;
+                let frame_per_shot = ((60. / weapon_config.firing_rate)) as u32;
                 let current_frame = frame.frame;
                 let frames_since_last_shot = current_frame - weapon_state.last_fire_frame;
 
@@ -405,12 +405,15 @@ pub fn weapon_rollback_system(
 
                 if can_fire {
                     if let Ok((_, facing_direction, _)) = player_query.get(**parent) {
-                        let aim_dir = RVec2 {
-                            x: input.pan_x as i32 / 127,
-                            y: input.pan_y as i32 / 127
-                        };
+                        let aim_dir = Vec2::new(
+                            input.pan_x as f32 / 127.0,
+                            input.pan_y as f32 / 127.0
+                        ).normalize();
 
-                        let direction = calculate_deterministic_spread_direction(&mut rng, weapon_config.spread, &aim_dir);
+                        // need to replace with fix seed random number
+                        let spread_angle = (rng.next_f32_symmetric() - 0.5)  * weapon_config.spread;
+                        let spread_rotation = Mat2::from_angle(spread_angle);
+                        let direction = spread_rotation * aim_dir;
 
                         spawn_bullet_rollback(
                             &mut commands,
@@ -455,8 +458,8 @@ pub fn bullet_rollback_system(
     for (entity, mut transform, mut bullet, bullet_state) in bullet_query.iter_mut() {
         // Move bullet based on velocity (fixed timestep)
         let delta = bullet.velocity;
-        transform.translation.x += to_f32(delta.x);
-        transform.translation.y += to_f32(delta.y);
+        transform.translation.x += delta.x;
+        transform.translation.y += delta.y;
         
         // Track distance traveled (fixed timestep version)
         bullet.distance_traveled += delta.length();
