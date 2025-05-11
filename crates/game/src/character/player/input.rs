@@ -32,6 +32,7 @@ pub struct BoxInput{
     pub pan_y: i16,
 
     pub fire: bool,
+    pub reloading: bool,
     pub switch_weapon: bool,
 }
 
@@ -96,7 +97,10 @@ pub fn read_local_inputs(
          if action_state.pressed(&PlayerAction::SwitchWeapon) {
             input.switch_weapon = true;
          }
-
+        
+        if action_state.pressed(&PlayerAction::Reload) {
+            input.reloading = true;
+        }
 
         if let Ok(window) = q_window.get_single() {
             if let Ok((camera, camera_transform)) = q_camera.get_single() {

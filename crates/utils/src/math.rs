@@ -19,6 +19,24 @@ pub fn calculate_spread_angle(
     spread_angle
 }
 
+pub fn calculate_time_remaining_seconds(ending_frame_number: u32, current_frame: u32) -> f32 {
+    // Ensure current_frame does not exceed ending_frame_number to prevent underflow
+    // and negative time. If it does, no time is remaining.
+    if current_frame >= ending_frame_number {
+        return 0.0;
+    }
+
+    // Calculate the number of frames remaining
+    let frames_remaining: u32 = ending_frame_number - current_frame;
+
+    // Convert frames remaining to seconds
+    // We cast frames_remaining to f32 for the division
+    let time_remaining_seconds: f32 = frames_remaining as f32 / 60.0;
+
+    time_remaining_seconds
+}
+
+
 
 
 #[cfg(test)]

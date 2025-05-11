@@ -1,5 +1,7 @@
+pub mod ui;
+
 use animation::{AnimationBundle, FacingDirection};
-use bevy::{prelude::*, sprite::Anchor, utils::HashMap};
+use bevy::{prelude::*, utils::HashMap};
 use bevy_ggrs::{AddRollbackCommandExtension, PlayerInputs, Rollback};
 use ggrs::PlayerHandle;
 use serde::{Deserialize, Serialize};
@@ -119,6 +121,7 @@ pub struct Bullet {
 pub struct WeaponInventory {
     pub active_weapon_index: usize,
     pub frame_switched: u32,
+    pub is_reloading: bool,
     pub weapons: Vec<(Entity, Weapon)>,  // Store entity handles and weapon data
 }
 
@@ -127,8 +130,15 @@ impl Default for WeaponInventory {
         Self {
             active_weapon_index: 0,
             frame_switched: 0,
+            is_reloading: false,
             weapons: Vec::new(),
         }
+    }
+}
+
+impl WeaponInventory {
+    pub fn active_weapon(&self) -> &(Entity, Weapon) {
+        return self.weapons.get(self.active_weapon_index).unwrap();
     }
 }
 
@@ -139,6 +149,8 @@ pub struct WeaponModeState {
     pub mag_quantity: u32,
 
     pub burst_shots_left: u32,
+
+    pub mag_size: u32,
 }
 
 
@@ -179,6 +191,67 @@ pub struct WeaponsConfig(pub HashMap<String, WeaponAsset>);
 // UTILITY FUNCTION
 
 
+impl WeaponModeState {
+    // Do the reloading of the ammo when the reloading process is over or some other event
+    pub fn reload(&mut self) {
+        if self.mag_quantity > 0 {
+            self.mag_quantity -= 1;
+            self.mag_ammo = self.mag_size;
+        }
+    }
+
+    pub fn is_mag_full(&self) -> bool {
+        self.mag_ammo == self.mag_size
+    }
+}
+
+impl WeaponModesState {
+    pub fn reload(&mut self, mode: &String) {
+        if let Some(mode) = self.modes.get_mut(mode) {
+            mode.reload();
+        }
+    }
+}
+
+
+impl WeaponState {
+
+
+    pub fn is_reloading(&self) -> bool {
+        self.reloading_ending_frame.is_some()
+    }
+
+    pub fn is_reloading_over(&self, current_frame: u32) -> bool {
+        self.reloading_ending_frame.map_or_else(|| true, |f| current_frame >= f)
+    }
+
+    pub fn clear_reloading(&mut self) {
+        self.reloading_ending_frame = None;
+    }
+
+    pub fn start_reload(
+        &mut self,
+        current_game_frame: u32,
+        reload_time_seconds: f32,
+    ) {
+        self.reloading_ending_frame = {
+            if reload_time_seconds <= 0.0 {
+                None
+            } else {
+                let frames_to_reload = (reload_time_seconds * 60.0).ceil() as u32;
+                if frames_to_reload == 0 { // Ensure at least one frame for very short reload times
+                    Some(current_game_frame + 1)
+                } else {
+                    Some(current_game_frame + frames_to_reload)
+                }
+            }
+        };
+    }
+}
+
+
+// start the reload process
+
 
 // Function to spawn weapon , all weapon should be spawn on the user when they got them
 pub fn spawn_weapon_for_player(
@@ -207,6 +280,7 @@ pub fn spawn_weapon_for_player(
             MagBulletConfig::Mag { mag_size, mag_limit } => {
                 weapon_mode_state.mag_ammo = mag_size;
                 weapon_mode_state.mag_quantity = mag_limit;
+                weapon_mode_state.mag_size = mag_size;
             },
             MagBulletConfig::Magless {  bullet_limit } => {
                 weapon_mode_state.mag_ammo = bullet_limit;
@@ -350,32 +424,58 @@ pub fn weapon_rollback_system(
     for (mut inventory, player) in inventory_query.iter_mut() {
         let (input, _input_status) = inputs[player.handle];
 
-        if input.switch_weapon && !inventory.weapons.is_empty() {
-            let new_index = (inventory.active_weapon_index + 1) % inventory.weapons.len();
-
-            if new_index != inventory.active_weapon_index &&
-                inventory.frame_switched + 20 < frame.frame {
-                inventory.active_weapon_index = new_index;
-                inventory.frame_switched = frame.frame;
-            }
-        }
-
+        // Do nothing if no weapons
         if inventory.weapons.is_empty() {
             continue;
         }
         
+        // Get active weapon
         let (weapon_entity, _) = inventory.weapons[inventory.active_weapon_index];
 
 
+        // Get the entity for the active weapon
         if let Ok((mut weapon, mut weapon_state, mut weapon_modes_state, weapon_transform, parent)) = weapon_query.get_mut(weapon_entity) {
             let active_mode = weapon_state.active_mode.clone();
             let weapon_config = weapon.config.firing_modes.get(&active_mode).unwrap();
             let weapon_mode_state = weapon_modes_state.modes.get_mut(&active_mode).unwrap();
+
+
+            // Check if reloading and update progress,
+            if weapon_state.is_reloading() {
+                if weapon_state.is_reloading_over(frame.frame) {
+                    weapon_mode_state.reload();
+                    weapon_state.clear_reloading();
+                    inventory.is_reloading = false;
+                } else {
+                    continue;
+                }
+            } else if input.reloading && !weapon_mode_state.is_mag_full() {
+                inventory.is_reloading = true;
+                weapon_state.start_reload(frame.frame, weapon_config.reload_time_seconds);
+                continue;
+            }
+
+            // Handle switching of weapons, will start firing on the next frame
+            if input.switch_weapon && !inventory.weapons.is_empty(){
+                let new_index = (inventory.active_weapon_index + 1) % inventory.weapons.len();
+
+                if new_index != inventory.active_weapon_index &&
+                    inventory.frame_switched + 20 < frame.frame {
+                    inventory.active_weapon_index = new_index;
+                    inventory.frame_switched = frame.frame;
+
+                    continue;
+                }
+            }
+
+
+
             if input.fire {
                 // Calculate fire rate in frames (60 FPS assumed) , need to be configure via ressource instead
                 let frame_per_shot = ((60. / weapon_config.firing_rate)) as u32;
                 let current_frame = frame.frame;
                 let frames_since_last_shot = current_frame - weapon_state.last_fire_frame;
+
 
                 let (can_fire, empty) = match weapon_config.firing_mode {
                     FiringMode::Automatic { .. } => {
@@ -398,6 +498,8 @@ pub fn weapon_rollback_system(
                 };
 
                 if empty {
+                    inventory.is_reloading = true;
+                    weapon_state.start_reload(frame.frame, weapon_config.reload_time_seconds);
                     continue;
                 }
 

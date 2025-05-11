@@ -16,6 +16,8 @@ pub enum PlayerAction {
 
     SwitchWeapon,
 
+    Reload,
+
     PointerPosition,
     PointerClick,
 }
@@ -33,6 +35,7 @@ pub fn get_input_map() -> InputMap<PlayerAction> {
         (PlayerAction::MoveRight, KeyCode::ArrowRight),
         (PlayerAction::Interaction, KeyCode::KeyH),
         (PlayerAction::SwitchWeapon, KeyCode::Tab),
+        (PlayerAction::Reload, KeyCode::KeyR)
     ]);
     // Add gamepad support if needed
     map.insert(PlayerAction::MoveUp, GamepadButton::DPadUp);
@@ -40,6 +43,7 @@ pub fn get_input_map() -> InputMap<PlayerAction> {
     map.insert(PlayerAction::MoveLeft, GamepadButton::DPadLeft);
     map.insert(PlayerAction::MoveRight, GamepadButton::DPadRight);
     map.insert(PlayerAction::Interaction, GamepadButton::North);
+    map.insert(PlayerAction::Reload, GamepadButton::West);
     // Add more bindings...
     map.insert(PlayerAction::PointerClick, MouseButton::Left);
 
