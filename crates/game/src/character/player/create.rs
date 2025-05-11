@@ -1,13 +1,13 @@
 
-use animation::{AnimationBundle, AnimationMapConfig, SpriteSheetConfig};
+use animation::AnimationBundle;
 use bevy::{prelude::*, utils:: HashMap};
 use leafwing_input_manager::{prelude::ActionState, InputManagerBundle};
 use utils::bmap;
 
-use crate::{character::movement::Velocity, global_asset::GlobalAsset, weapons::{spawn_weapon_for_player, FiringMode, Weapon, WeaponInventory, WeaponPosition, WeaponsConfig}};
+use crate::{character::movement::Velocity, global_asset::GlobalAsset, weapons::{spawn_weapon_for_player, FiringMode, Weapon, WeaponInventory, WeaponsConfig}};
 
 use bevy_ggrs::AddRollbackCommandExtension;
-use super::{config::{PlayerConfig, PlayerConfigHandles}, control::{get_input_map, PlayerAction}, LocalPlayer, Player};
+use super::{config::{PlayerConfig, PlayerConfigHandles}, control::{get_input_map, PlayerAction}, input::CursorPosition, LocalPlayer, Player};
 
 pub fn create_player(
     commands: &mut Commands,
@@ -36,6 +36,7 @@ pub fn create_player(
         Visibility::default(),
 
         Player { handle: handle },
+        CursorPosition::default(),
         Velocity(Vec2::ZERO),
 
         PlayerConfigHandles {
@@ -72,7 +73,6 @@ pub fn create_player(
     commands.entity(entity)
         .insert((
             inventory,
-            WeaponPosition::default(),
         ));
 
 }
