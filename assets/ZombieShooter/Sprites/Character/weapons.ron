@@ -26,7 +26,8 @@
             name: "pistol",
             index: 3,
             bullet_offset_right: ( 0.0, 2. ),
-            bullet_offset_left: ( 0.0, -2. )
+            bullet_offset_left: ( 0.0, -2. ),
+            weapon_offset: ( 0.0, -5. )
         )
     ),
     "machine_gun": (
@@ -56,7 +57,8 @@
             name: "machine_gun",
             index: 1,
             bullet_offset_right: ( 17.0, 2.0 ),
-            bullet_offset_left: ( 17.0, -2.0 )
+            bullet_offset_left: ( 17.0, -2.0 ),
+            weapon_offset: ( 0.0, -5. )
         )
     ),
     "shotgun": (
@@ -90,7 +92,8 @@
             name: "shotgun",
             index: 0,
             bullet_offset_right: ( 18.0, 1.5 ),
-            bullet_offset_left: ( 18.0, -1.5 )
+            bullet_offset_left: ( 18.0, -1.5 ),
+            weapon_offset: ( 0.0, -5. )
         )
     ),
 })

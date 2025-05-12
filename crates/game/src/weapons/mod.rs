@@ -75,6 +75,9 @@ pub struct WeaponConfig {
 pub struct WeaponSpriteConfig {
     pub name: String,
     pub index: usize,
+
+    pub weapon_offset: Vec2,
+
     pub bullet_offset_left: Vec2,
     pub bullet_offset_right: Vec2,
 }
@@ -292,7 +295,7 @@ pub fn spawn_weapon_for_player(
     let weapon: Weapon = weapon.into();
 
     let entity = commands.spawn((
-        Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)).with_rotation(Quat::IDENTITY),
+        Transform::from_translation(Vec3::new(weapon.sprite_config.weapon_offset.x, weapon.sprite_config.weapon_offset.y, 0.0)).with_rotation(Quat::IDENTITY),
         weapon_state,
         weapon_modes_state,
         weapon.clone(),
