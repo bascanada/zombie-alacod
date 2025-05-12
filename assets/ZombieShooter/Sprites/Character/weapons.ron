@@ -28,6 +28,14 @@
             bullet_offset_right: ( 0.0, 2. ),
             bullet_offset_left: ( 0.0, -2. ),
             weapon_offset: ( 0.0, -5. )
+        ),
+        audio_config: (
+            modes: {
+                "default": (
+                    reloading: "sounds/machine-gun-reloading.ogg",
+                    firing: "sounds/machine-gun.ogg"
+                )
+            }
         )
     ),
     "machine_gun": (
@@ -59,6 +67,14 @@
             bullet_offset_right: ( 17.0, 2.0 ),
             bullet_offset_left: ( 17.0, -2.0 ),
             weapon_offset: ( 0.0, -5. )
+        ),
+        audio_config: (
+            modes: {
+                "default": (
+                    reloading: "sounds/machine-gun-reloading.ogg",
+                    firing: "sounds/machine-gun.ogg"
+                )
+            }
         )
     ),
     "shotgun": (
@@ -94,6 +110,14 @@
             bullet_offset_right: ( 18.0, 1.5 ),
             bullet_offset_left: ( 18.0, -1.5 ),
             weapon_offset: ( 0.0, -5. )
+        ),
+        audio_config: (
+            modes: {
+                "default": (
+                    reloading: "sounds/machine-gun-reloading.ogg",
+                    firing: "sounds/machine-gun.ogg"
+                )
+            }
         )
     ),
 })

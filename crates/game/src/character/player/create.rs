@@ -3,6 +3,7 @@ use animation::AnimationBundle;
 use bevy::{prelude::*, utils:: HashMap};
 use leafwing_input_manager::{prelude::ActionState, InputManagerBundle};
 use utils::bmap;
+use bevy_kira_audio::prelude::*;
 
 use crate::{character::movement::Velocity, global_asset::GlobalAsset, weapons::{spawn_weapon_for_player, FiringMode, Weapon, WeaponInventory, WeaponsConfig}};
 
@@ -35,6 +36,7 @@ pub fn create_player(
         Transform::from_scale(Vec3::splat(6.0)).with_translation(Vec3::new(-50.0 * handle as f32, 0.0, 0.0)),
         Visibility::default(),
 
+        SpatialAudioEmitter {instances: vec![]},
         Player { handle: handle },
         CursorPosition::default(),
         Velocity(Vec2::ZERO),

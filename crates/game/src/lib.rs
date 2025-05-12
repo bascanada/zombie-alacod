@@ -6,3 +6,4 @@ pub mod audio;
 pub mod global_asset;
 pub mod weapons;
 pub mod debug;
+pub mod camera;

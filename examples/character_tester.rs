@@ -5,7 +5,7 @@ use args::get_args;
 use bevy::{asset::AssetMetaCheck, prelude::*, utils::hashbrown::HashMap, window::WindowResolution};
 use game::{character::{movement::Velocity, player::{config::{PlayerConfig, PlayerConfigHandles}, control::{get_input_map, PlayerAction}, LocalPlayer, Player}}, frame::FrameDebugUIPlugin, jjrs::{GggrsConnectionConfiguration, GggrsSessionConfiguration}, plugins::BaseZombieGamePlugin};
 
-use utils::{camera::tod::setup_camera, web::WebPlugin};
+use utils::{web::WebPlugin};
 
 
 fn character_equipment_system(
@@ -60,7 +60,6 @@ fn main() {
         .add_plugins(FrameDebugUIPlugin)
         .add_plugins(BaseZombieGamePlugin::new(matchbox != ""))
         .insert_resource(GggrsSessionConfiguration { matchbox: matchbox != "", lobby: lobby.clone(), matchbox_url: matchbox.clone(), connection: GggrsConnectionConfiguration { input_delay: 5, max_player: nbr_player, desync_interval: 10, socket: players.len() > 1, udp_port: local_port}, players: players })
-        .add_systems(Startup, setup_camera)
         .add_systems(Update, character_equipment_system)
         .run();
 }

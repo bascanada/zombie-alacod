@@ -11,7 +11,8 @@ pub struct ZAudioPlugin {}
 impl Plugin for ZAudioPlugin {
    fn build(&self, app: &mut App) {
        app.add_plugins(AudioPlugin);
-       //app.add_systems(Startup, play_loop);
+       app.add_plugins(SpatialAudioPlugin);
+       app.add_systems(Startup, play_loop);
    } 
     
 }
