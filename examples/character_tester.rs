@@ -60,7 +60,6 @@ fn main() {
         .add_plugins(FrameDebugUIPlugin)
         .add_plugins(BaseZombieGamePlugin::new(matchbox != ""))
         .insert_resource(GggrsSessionConfiguration { matchbox: matchbox != "", lobby: lobby.clone(), matchbox_url: matchbox.clone(), connection: GggrsConnectionConfiguration { input_delay: 5, max_player: nbr_player, desync_interval: 10, socket: players.len() > 1, udp_port: local_port}, players: players })
-        .add_systems(Startup, setup_camera)
         .add_systems(Update, character_equipment_system)
         .run();
 }

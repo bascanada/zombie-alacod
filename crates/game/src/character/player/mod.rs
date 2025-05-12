@@ -16,4 +16,5 @@ pub struct LocalPlayer {
 #[reflect(Component)]
 pub struct Player {
    pub handle: PlayerHandle,
+   pub color: Color,
 }
