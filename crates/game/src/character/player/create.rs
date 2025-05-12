@@ -9,6 +9,13 @@ use crate::{character::movement::Velocity, global_asset::GlobalAsset};
 use bevy_ggrs::AddRollbackCommandExtension;
 use super::{config::{PlayerConfig, PlayerConfigHandles}, control::{get_input_map, PlayerAction}, LocalPlayer, Player};
 
+const PLAYER_COLORS: &'static [LinearRgba] = &[
+    LinearRgba::RED,
+    LinearRgba::BLUE,
+    LinearRgba::GREEN,
+    LinearRgba::BLACK,
+];
+
 pub fn create_player(
     commands: &mut Commands,
     global_assets: &Res<GlobalAsset>,
@@ -34,7 +41,10 @@ pub fn create_player(
         Transform::from_scale(Vec3::splat(6.0)).with_translation(Vec3::new(-50.0 * handle as f32, 0.0, 0.0)),
         Visibility::default(),
 
-        Player { handle: handle },
+        Player { 
+            handle: handle,
+            color: PLAYER_COLORS[handle].into(),
+        },
         Velocity(Vec2::ZERO),
 
         PlayerConfigHandles {
