@@ -6,13 +6,21 @@ use bevy::prelude::*;
 use bevy_kira_audio::prelude::*;
 
 
+
+#[derive(Component)]
+pub struct AudioState {
+    
+
+}
+
+
 pub struct ZAudioPlugin {}
 
 impl Plugin for ZAudioPlugin {
    fn build(&self, app: &mut App) {
        app.add_plugins(AudioPlugin);
        app.add_plugins(SpatialAudioPlugin);
-       app.add_systems(Startup, play_loop);
+       //app.add_systems(Startup, play_loop);
    } 
     
 }
