@@ -93,8 +93,8 @@ fn update_weapons_text(
             }
 
             if let Ok(mut text) = q_reloading.get_single_mut() {
-                text.0 = if state.is_reloading() {
-                    format!("{:.2}s", calculate_time_remaining_seconds(state.reloading_ending_frame.unwrap(), frame.frame))
+                text.0 = if inventory.is_reloading() {
+                    format!("{:.2}s", calculate_time_remaining_seconds(inventory.reloading_ending_frame.unwrap(), frame.frame))
                 } else {
                     format!("")
                 };

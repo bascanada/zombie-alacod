@@ -121,8 +121,9 @@ pub struct Bullet {
 pub struct WeaponInventory {
     pub active_weapon_index: usize,
     pub frame_switched: u32,
-    pub is_reloading: bool,
     pub weapons: Vec<(Entity, Weapon)>,  // Store entity handles and weapon data
+
+    pub reloading_ending_frame: Option<u32>,
 }
 
 impl Default for WeaponInventory {
@@ -130,7 +131,7 @@ impl Default for WeaponInventory {
         Self {
             active_weapon_index: 0,
             frame_switched: 0,
-            is_reloading: false,
+            reloading_ending_frame: None,
             weapons: Vec::new(),
         }
     }
@@ -166,7 +167,6 @@ pub struct WeaponState {
     pub is_firing: bool,
     pub active_mode: String,
 
-    pub reloading_ending_frame: Option<u32>,
 }
 
 // Rollback state for bullets
@@ -214,8 +214,7 @@ impl WeaponModesState {
 }
 
 
-impl WeaponState {
-
+impl WeaponInventory {
 
     pub fn is_reloading(&self) -> bool {
         self.reloading_ending_frame.is_some()
@@ -441,17 +440,15 @@ pub fn weapon_rollback_system(
 
 
             // Check if reloading and update progress,
-            if weapon_state.is_reloading() {
-                if weapon_state.is_reloading_over(frame.frame) {
+            if inventory.is_reloading() {
+                if inventory.is_reloading_over(frame.frame) {
                     weapon_mode_state.reload();
-                    weapon_state.clear_reloading();
-                    inventory.is_reloading = false;
+                    inventory.clear_reloading();
                 } else {
                     continue;
                 }
             } else if input.buttons & INPUT_RELOAD != 0  && !weapon_mode_state.is_mag_full() {
-                inventory.is_reloading = true;
-                weapon_state.start_reload(frame.frame, weapon_config.reload_time_seconds);
+                inventory.start_reload(frame.frame, weapon_config.reload_time_seconds);
                 continue;
             }
 
@@ -496,8 +493,7 @@ pub fn weapon_rollback_system(
                 };
 
                 if empty {
-                    inventory.is_reloading = true;
-                    weapon_state.start_reload(frame.frame, weapon_config.reload_time_seconds);
+                    inventory.start_reload(frame.frame, weapon_config.reload_time_seconds);
                     continue;
                 }
 
