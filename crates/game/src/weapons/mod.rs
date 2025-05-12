@@ -1,8 +1,6 @@
 pub mod ui;
-pub mod audio;
 
 use animation::{AnimationBundle, FacingDirection};
-use audio::{WeaponAudioConfig, WeaponSoundEvent};
 use bevy::{prelude::*, utils::HashMap};
 use bevy_ggrs::{AddRollbackCommandExtension, PlayerInputs, Rollback};
 use ggrs::PlayerHandle;
@@ -88,7 +86,6 @@ pub struct WeaponSpriteConfig {
 pub struct WeaponAsset {
     pub config: WeaponConfig,
     pub sprite_config: WeaponSpriteConfig,
-    pub audio_config: WeaponAudioConfig,
 }
 
 // Component for a weapon
@@ -96,12 +93,11 @@ pub struct WeaponAsset {
 pub struct Weapon {
     pub config: WeaponConfig,
     pub sprite_config: WeaponSpriteConfig,
-    pub audio_config: WeaponAudioConfig,
 }
 
 impl From<WeaponAsset> for Weapon {
     fn from(value: WeaponAsset) -> Self {
-        Self { config: value.config, sprite_config: value.sprite_config, audio_config: value.audio_config }
+        Self { config: value.config, sprite_config: value.sprite_config }
     }
 }
 
@@ -417,7 +413,6 @@ pub fn system_weapon_position(
 // rollback system for weapon action , firing and all
 pub fn weapon_rollback_system(
     mut commands: Commands,
-    mut event_firing: EventWriter<WeaponSoundEvent>,
     mut rng: ResMut<RollbackRng>,
     inputs: Res<PlayerInputs<PeerConfig>>,
     frame: Res<FrameCount>,
@@ -456,12 +451,6 @@ pub fn weapon_rollback_system(
                     continue;
                 }
             } else if input.buttons & INPUT_RELOAD != 0  && !weapon_mode_state.is_mag_full() {
-                event_firing.send(WeaponSoundEvent {
-                    sound: audio::WeaponSound::Reloading,
-                    config: weapon.audio_config.modes.get(&active_mode).unwrap().clone(),
-                    emiting_entity: entity.clone(),
-                });
-
                 inventory.start_reload(frame.frame, weapon_config.reload_time_seconds);
                 continue;
             }
@@ -507,22 +496,8 @@ pub fn weapon_rollback_system(
                 };
 
                 if empty {
-                    event_firing.send(WeaponSoundEvent {
-                        sound: audio::WeaponSound::Reloading,
-                        config: weapon.audio_config.modes.get(&active_mode).unwrap().clone(),
-                        emiting_entity: entity.clone(),
-                    });
-
                     inventory.start_reload(frame.frame, weapon_config.reload_time_seconds);
                     continue;
-                }
-
-                if !weapon_state.is_firing {
-                    event_firing.send(WeaponSoundEvent {
-                        sound: audio::WeaponSound::FiringStart,
-                        config: weapon.audio_config.modes.get(&active_mode).unwrap().clone(),
-                        emiting_entity: entity.clone(),
-                    });
                 }
 
                 weapon_state.is_firing = true;

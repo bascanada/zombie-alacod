@@ -8,7 +8,7 @@ use bevy_common_assets::ron::RonAssetPlugin;
 use animation::{character_visuals_spawn_system, set_sprite_flip, D2AnimationPlugin};
 use bevy_ggrs::GgrsPlugin;
 
-use crate::{audio::ZAudioPlugin, camera::setup_camera, character::{movement::Velocity, player::{config::PlayerConfig, control::PlayerAction, input::{apply_friction, apply_inputs, move_characters, read_local_inputs, update_animation_state, PointerWorldPosition}, jjrs::PeerConfig, Player}}, debug::SpriteDebugOverlayPlugin, frame::{increase_frame_system, FrameCount}, global_asset::{add_global_asset, loading_asset_system}, jjrs::{log_ggrs_events, setup_ggrs_local, start_matchbox_socket, wait_for_players, GggrsSessionConfiguration}, weapons::{audio::{handle_weapon_sound_event, WeaponSoundEvent}, bullet_rollback_system, system_weapon_position, ui::WeaponDebugUIPlugin, weapon_inventory_system, weapon_rollback_system, weapons_config_update_system, Bullet, BulletRollbackState, WeaponInventory, WeaponModesState, WeaponState, WeaponsConfig}};
+use crate::{audio::ZAudioPlugin, camera::setup_camera, character::{movement::Velocity, player::{config::PlayerConfig, control::PlayerAction, input::{apply_friction, apply_inputs, move_characters, read_local_inputs, update_animation_state, PointerWorldPosition}, jjrs::PeerConfig, Player}}, debug::SpriteDebugOverlayPlugin, frame::{increase_frame_system, FrameCount}, global_asset::{add_global_asset, loading_asset_system}, jjrs::{log_ggrs_events, setup_ggrs_local, start_matchbox_socket, wait_for_players, GggrsSessionConfiguration}, weapons::{bullet_rollback_system, system_weapon_position, ui::WeaponDebugUIPlugin, weapon_inventory_system, weapon_rollback_system, weapons_config_update_system, Bullet, BulletRollbackState, WeaponInventory, WeaponModesState, WeaponState, WeaponsConfig}};
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Hash, States)]
 pub enum AppState {
@@ -31,7 +31,6 @@ impl Plugin for BaseZombieGamePlugin {
         app.add_plugins(SpriteDebugOverlayPlugin{});
 
         app.add_plugins(ZAudioPlugin {});
-        app.add_event::<WeaponSoundEvent>();
 
         app.add_plugins(D2AnimationPlugin);
         app.add_plugins(WeaponDebugUIPlugin);
@@ -96,7 +95,6 @@ impl Plugin for BaseZombieGamePlugin {
         app.add_systems(Update, (
             weapon_inventory_system,
             weapons_config_update_system,
-            handle_weapon_sound_event
         ));
     }
 }
