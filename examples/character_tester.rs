@@ -5,7 +5,7 @@ use args::get_args;
 use bevy::{asset::AssetMetaCheck, prelude::*, utils::hashbrown::HashMap, window::WindowResolution};
 use game::{character::{movement::Velocity, player::{config::{PlayerConfig, PlayerConfigHandles}, control::{get_input_map, PlayerAction}, LocalPlayer, Player}}, frame::FrameDebugUIPlugin, jjrs::{GggrsConnectionConfiguration, GggrsSessionConfiguration}, plugins::BaseZombieGamePlugin};
 
-use utils::{camera::tod::setup_camera, web::WebPlugin};
+use utils::{web::WebPlugin};
 
 
 fn character_equipment_system(

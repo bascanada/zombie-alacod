@@ -2,7 +2,7 @@ use animation::{AnimationMapConfig, SpriteSheetConfig};
 use bevy::{prelude::*, utils::HashMap};
 use utils::bmap;
 
-use crate::{camera::CameraSettingsAsset, character::player::config::PlayerConfig, plugins::AppState};
+use crate::{camera::CameraSettingsAsset, character::player::config::PlayerConfig, plugins::AppState, weapons::WeaponsConfig};
 
 const PLAYER_SPRITESHEET_CONFIG_PATH: &str = "ZombieShooter/Sprites/Character/player_sheet.ron";
 const PLAYER_SHIRT_SPRITESHEET_CONFIG_PATH: &str = "ZombieShooter/Sprites/Character/shirt_1_sheet.ron";
@@ -16,6 +16,7 @@ pub struct GlobalAsset {
     pub spritesheets: HashMap<String, HashMap<String, Handle<SpriteSheetConfig>>>,
     pub animations: HashMap<String, Handle<AnimationMapConfig>>,
     pub player_configs: HashMap<String, Handle<PlayerConfig>>,
+    pub weapons: Handle<WeaponsConfig>,
     pub camera: Handle<CameraSettingsAsset>,
 }
 
@@ -28,14 +29,27 @@ impl GlobalAsset {
                     "shirt" => asset_server.load(PLAYER_SHIRT_SPRITESHEET_CONFIG_PATH),
                     "hair" => asset_server.load(PLAYER_HAIR_SPRITESHEET_CONFIG_PATH),
                     "shadow" => asset_server.load("ZombieShooter/Sprites/Character/shadow_sheet.ron")
+                ),
+                "shotgun" => bmap!(
+                    "body" => asset_server.load("ZombieShooter/Sprites/Character/shotgun_sheet.ron")
+                ),
+                "pistol" => bmap!(
+                    "body" => asset_server.load("ZombieShooter/Sprites/Character/pistol_sheet.ron")
+                ),
+                "machine_gun" => bmap!(
+                    "body" => asset_server.load("ZombieShooter/Sprites/Character/machine_gun_sheet.ron")
                 )
             ),
             animations: bmap!(
-                "player" => asset_server.load(PLAYER_ANIMATIONS_CONFIG_PATH)
+                "player" => asset_server.load(PLAYER_ANIMATIONS_CONFIG_PATH),
+                "machine_gun" => asset_server.load(PLAYER_ANIMATIONS_CONFIG_PATH),
+                "pistol" => asset_server.load(PLAYER_ANIMATIONS_CONFIG_PATH),
+                "shotgun" => asset_server.load(PLAYER_ANIMATIONS_CONFIG_PATH)
             ),
             player_configs: bmap!(
                 "player" => asset_server.load(PLAYER_CONFIG_PATH)
             ),
+            weapons: asset_server.load("ZombieShooter/Sprites/Character/weapons.ron"),
             camera: asset_server.load("camera.ron"),
         }
     }
@@ -73,6 +87,9 @@ pub fn loading_asset_system(
         }
     }
 
+    if !asset_server.load_state(&global_assets.weapons).is_loaded() {
+        return;
+    }
     if !asset_server.load_state(&global_assets.camera).is_loaded() {
         return;
     }

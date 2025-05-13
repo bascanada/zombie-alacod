@@ -21,8 +21,7 @@ const INPUT_UP: u16 = 1 << 0;
 const INPUT_DOWN: u16 = 1 << 1;
 const INPUT_LEFT: u16 = 1 << 2;
 const INPUT_RIGHT: u16 = 1 << 3;
-
-const INPUT_INTERATION: u16 = 1 << 4;
+pub const INPUT_RELOAD: u16 = 1 << 4;
 
 const PAN_FACING_THRESHOLD: i16 = 5;
 
@@ -31,11 +30,21 @@ const PAN_FACING_THRESHOLD: i16 = 5;
 pub struct BoxInput{
     pub buttons: u16,
     pub pan_x: i16,
-    pub pan_y: i16
+    pub pan_y: i16,
+
+    pub fire: bool,
+    pub switch_weapon: bool,
 }
 
 #[derive(Resource, Default, Debug, Clone, Copy)]
 pub struct PointerWorldPosition(pub Vec2);
+
+/// Component for the weapon sprite's position relative to player
+#[derive(Component, Clone, Copy, Default)]
+pub struct CursorPosition {
+    pub x: i32,
+    pub y: i32
+}
 
 
 fn get_facing_direction(input: &BoxInput) -> FacingDirection {
@@ -57,7 +66,7 @@ fn get_facing_direction(input: &BoxInput) -> FacingDirection {
 
 pub fn read_local_inputs(
     mut commands: Commands,
-    players: Query<(&ActionState<PlayerAction>, &GlobalTransform, &Player), With<LocalPlayer>>,
+    players: Query<(&ActionState<PlayerAction>, &Transform, &Player), With<LocalPlayer>>,
     
     q_window: Query<&Window, With<PrimaryWindow>>,
     q_camera: Query<(&Camera, &GlobalTransform)>,
@@ -81,20 +90,28 @@ pub fn read_local_inputs(
             input.buttons |= INPUT_RIGHT;
          }
 
-         if action_state.pressed(&PlayerAction::Interaction) {
-            input.buttons |= INPUT_INTERATION;
+         if action_state.pressed(&PlayerAction::PointerClick) {
+            input.fire = true;
          }
+
+         if action_state.pressed(&PlayerAction::SwitchWeapon) {
+            input.switch_weapon = true;
+         }
+         if action_state.pressed(&PlayerAction::Reload) {
+            input.buttons |= INPUT_RELOAD;
+         }
+
 
 
         if let Ok(window) = q_window.get_single() {
             if let Ok((camera, camera_transform)) = q_camera.get_single() {
                 if let Some(cursor_position) = window.cursor_position() {
                     if let Ok(world_position) = camera.viewport_to_world_2d(camera_transform, cursor_position) {
-                        let player_position = transform.translation().truncate();
+                        let player_position = transform.translation.truncate();
                         let pointer_distance = world_position - player_position;
 
-                        input.pan_x = pointer_distance.x.round().clamp(i16::MIN as f32, i16::MAX as f32) as i16;
-                        input.pan_y = pointer_distance.y.round().clamp(i16::MIN as f32, i16::MAX as f32) as i16;
+                        input.pan_x = (pointer_distance.x).round().clamp(i16::MIN as f32, i16::MAX as f32) as i16;
+                        input.pan_y = (pointer_distance.y).round().clamp(i16::MIN as f32, i16::MAX as f32) as i16;
                     }
                 }
             }
@@ -111,12 +128,12 @@ pub fn apply_inputs(
     inputs: Res<PlayerInputs<PeerConfig>>,
     player_configs: Res<Assets<PlayerConfig>>,
 
-    mut query: Query<(Entity, &mut Velocity, &mut ActiveLayers, &mut FacingDirection, &PlayerConfigHandles, &Player), With<Rollback>>,
+    mut query: Query<(Entity, &mut Velocity, &mut ActiveLayers, &mut FacingDirection, &mut CursorPosition, &PlayerConfigHandles, &Player), With<Rollback>>,
 
-    time: Res<Time>, 
+    time: Res<Time>,
 ) {
 
-    for (entity, mut velocity, mut active_layers, mut facing_direction , config_handles, player) in query.iter_mut() {
+    for (entity, mut velocity, mut active_layers, mut facing_direction , mut cursor_position, config_handles, player) in query.iter_mut() {
         if let Some(config) = player_configs.get(&config_handles.config) {
             let (input, _input_status) = inputs[player.handle];
 
@@ -128,6 +145,9 @@ pub fn apply_inputs(
             if input.buttons & INPUT_RIGHT != 0 { direction.x += 1.0; }
 
             *facing_direction = get_facing_direction(&input);
+
+            cursor_position.x = input.pan_x as i32;
+            cursor_position.y = input.pan_y as i32;
 
             if direction != Vec2::ZERO {
                  let move_delta = direction.normalize() * config.movement.acceleration * time.delta().as_secs_f32();

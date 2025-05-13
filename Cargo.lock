@@ -7385,7 +7385,9 @@ name = "utils"
 version = "0.2.0"
 dependencies = [
  "bevy",
+ "bevy_ggrs",
  "console_error_panic_hook",
+ "serde",
  "web-sys",
 ]
 

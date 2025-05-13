@@ -9,7 +9,7 @@ use map::{
         plugins::{LdtkRoguePlugin, MyWorldInspectorPlugin},
     },
 };
-use utils::{camera::tod::setup_camera, web::WebPlugin};
+use utils::{web::WebPlugin};
 
 use std::env;
 
@@ -41,7 +41,6 @@ fn main() {
                 .set(window_plugin),
         )
         .add_plugins(MyWorldInspectorPlugin)
-        .add_systems(Startup, setup_camera)
         .add_systems(Startup, setup_generated_map)
         .add_plugins(WebPlugin {})
         .add_plugins(LdtkRoguePlugin)

@@ -3,6 +3,7 @@ pub mod ui;
 
 use bevy::prelude::*;
 use bevy_common_assets::ron::RonAssetPlugin;
+use bevy_kira_audio::SpatialAudioReceiver;
 use leafwing_input_manager::prelude::*;
 use serde::{Deserialize, Serialize};
 use ui::CameraDebugUIPlugin;
@@ -494,8 +495,10 @@ impl Rect {
 // Example of how to set up the camera in your game
 pub fn setup_camera(mut commands: Commands, settings: Res<CameraSettings>) {
     // Spawn the camera itself
+    println!("CREATING CAMERA");
     commands.spawn((
         Camera2dBundle::default(),
+        SpatialAudioReceiver,
         GameCamera {
             mode: CameraMode::PlayerLock,
             target_player_id: None,
@@ -508,7 +511,7 @@ pub fn setup_camera(mut commands: Commands, settings: Res<CameraSettings>) {
 
 fn setup_simple_background(mut commands: Commands) {
     // Background parameters
-    let tile_size = 200.0;
+    let tile_size = 400.0;
     let grid_size = 20; // This creates a 20x20 grid of tiles
     
     // Create a parent entity for all background tiles
