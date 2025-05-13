@@ -10,7 +10,7 @@ fn toggle_sprite_debug_visibility_system(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut state: ResMut<SpriteDebugOverlayState>,
 ) {
-    if keyboard_input.just_pressed(KeyCode::KeyP) {
+    if keyboard_input.just_pressed(KeyCode::KeyM) {
         state.is_visible = !state.is_visible;
         if state.is_visible {
             info!("Sprite debug overlay: ON");

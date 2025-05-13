@@ -2,7 +2,7 @@ use animation::{AnimationMapConfig, SpriteSheetConfig};
 use bevy::{prelude::*, utils::HashMap};
 use utils::bmap;
 
-use crate::{character::player::config::PlayerConfig, plugins::AppState, weapons::WeaponsConfig};
+use crate::{camera::CameraSettingsAsset, character::player::config::PlayerConfig, plugins::AppState, weapons::WeaponsConfig};
 
 const PLAYER_SPRITESHEET_CONFIG_PATH: &str = "ZombieShooter/Sprites/Character/player_sheet.ron";
 const PLAYER_SHIRT_SPRITESHEET_CONFIG_PATH: &str = "ZombieShooter/Sprites/Character/shirt_1_sheet.ron";
@@ -17,6 +17,7 @@ pub struct GlobalAsset {
     pub animations: HashMap<String, Handle<AnimationMapConfig>>,
     pub player_configs: HashMap<String, Handle<PlayerConfig>>,
     pub weapons: Handle<WeaponsConfig>,
+    pub camera: Handle<CameraSettingsAsset>,
 }
 
 impl GlobalAsset {
@@ -48,7 +49,8 @@ impl GlobalAsset {
             player_configs: bmap!(
                 "player" => asset_server.load(PLAYER_CONFIG_PATH)
             ),
-            weapons: asset_server.load("ZombieShooter/Sprites/Character/weapons.ron")
+            weapons: asset_server.load("ZombieShooter/Sprites/Character/weapons.ron"),
+            camera: asset_server.load("camera.ron"),
         }
     }
 }
@@ -86,6 +88,9 @@ pub fn loading_asset_system(
     }
 
     if !asset_server.load_state(&global_assets.weapons).is_loaded() {
+        return;
+    }
+    if !asset_server.load_state(&global_assets.camera).is_loaded() {
         return;
     }
 

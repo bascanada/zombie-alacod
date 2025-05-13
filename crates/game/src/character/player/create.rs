@@ -10,6 +10,13 @@ use crate::{character::movement::Velocity, global_asset::GlobalAsset, weapons::{
 use bevy_ggrs::AddRollbackCommandExtension;
 use super::{config::{PlayerConfig, PlayerConfigHandles}, control::{get_input_map, PlayerAction}, input::CursorPosition, LocalPlayer, Player};
 
+const PLAYER_COLORS: &'static [LinearRgba] = &[
+    LinearRgba::RED,
+    LinearRgba::BLUE,
+    LinearRgba::GREEN,
+    LinearRgba::BLACK,
+];
+
 pub fn create_player(
     commands: &mut Commands,
     weapons_asset: &Res<Assets<WeaponsConfig>>,
@@ -37,8 +44,11 @@ pub fn create_player(
         Visibility::default(),
 
         SpatialAudioEmitter {instances: vec![]},
-        Player { handle: handle },
         CursorPosition::default(),
+        Player { 
+            handle: handle,
+            color: PLAYER_COLORS[handle].into(),
+        },
         Velocity(Vec2::ZERO),
 
         PlayerConfigHandles {

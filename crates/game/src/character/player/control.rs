@@ -20,22 +20,33 @@ pub enum PlayerAction {
 
     PointerPosition,
     PointerClick,
+    
+    SwitchLockMode,
+    SwitchToUnlockMode,
+    SwitchTargetPlayer,
+
+    MoveCameraUp,
+    MoveCameraDown,
+    MoveCameraLeft,
+    MoveCameraRight,
 }
 
 // Utility function to create the input map
 pub fn get_input_map() -> InputMap<PlayerAction> {
     let mut map = InputMap::new([
         (PlayerAction::MoveUp, KeyCode::KeyW),
-        (PlayerAction::MoveUp, KeyCode::ArrowUp),
+        (PlayerAction::MoveCameraUp, KeyCode::ArrowUp),
         (PlayerAction::MoveDown, KeyCode::KeyS),
-        (PlayerAction::MoveDown, KeyCode::ArrowDown),
+        (PlayerAction::MoveCameraDown, KeyCode::ArrowDown),
         (PlayerAction::MoveLeft, KeyCode::KeyA),
-        (PlayerAction::MoveLeft, KeyCode::ArrowLeft),
+        (PlayerAction::MoveCameraLeft, KeyCode::ArrowLeft),
         (PlayerAction::MoveRight, KeyCode::KeyD),
         (PlayerAction::MoveRight, KeyCode::ArrowRight),
         (PlayerAction::Interaction, KeyCode::KeyH),
         (PlayerAction::SwitchWeapon, KeyCode::Tab),
-        (PlayerAction::Reload, KeyCode::KeyR)
+        (PlayerAction::Reload, KeyCode::KeyR),
+        (PlayerAction::MoveCameraRight, KeyCode::ArrowRight),
+        (PlayerAction::Interaction, KeyCode::KeyH)
     ]);
     // Add gamepad support if needed
     map.insert(PlayerAction::MoveUp, GamepadButton::DPadUp);
@@ -46,6 +57,9 @@ pub fn get_input_map() -> InputMap<PlayerAction> {
     map.insert(PlayerAction::Reload, GamepadButton::West);
     // Add more bindings...
     map.insert(PlayerAction::PointerClick, MouseButton::Left);
+
+    map.insert(PlayerAction::SwitchLockMode, KeyCode::KeyP);
+    map.insert(PlayerAction::SwitchToUnlockMode, KeyCode::KeyO);
 
     map.with_dual_axis(PlayerAction::Pan, GamepadStick::LEFT)
 

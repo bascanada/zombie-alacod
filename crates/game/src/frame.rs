@@ -28,7 +28,7 @@ fn setup_frame_counter_ui(mut commands: Commands, asset_server: Res<AssetServer>
         Text::new("Frame Count"),
         TextFont {
             font: font,
-            font_size: 67.0,
+            font_size: 16.0,
             ..Default::default()
         },
         TextLayout::new_with_justify(JustifyText::Center),
