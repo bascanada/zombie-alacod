@@ -19,22 +19,6 @@
                         mag_size: 6,
                         mag_limit: 8,
                     )
-                ),
-                "charging": (
-                    firing_rate: 2.0,
-                    firing_mode: Charging(min_charge_frames: 10, max_charge_frames: 180, damage_multiplier: 5.),
-                    spread: 0.05,
-                    recoil: 3.0,
-                    bullet_type: Standard(
-                        damage: 15.0,
-                        speed: 900.0,
-                    ),
-                    range: 700.0,
-                    reload_time_seconds: 1.5,
-                    mag: Mag(
-                        mag_size: 6,
-                        mag_limit: 8,
-                    )
                 )
             }
         ),

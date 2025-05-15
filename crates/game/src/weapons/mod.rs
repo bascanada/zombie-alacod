@@ -1,13 +1,13 @@
 pub mod ui;
 
 use animation::{AnimationBundle, FacingDirection};
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{prelude::*, utils::{HashMap, HashSet}};
 use bevy_ggrs::{AddRollbackCommandExtension, PlayerInputs, Rollback};
 use ggrs::PlayerHandle;
 use serde::{Deserialize, Serialize};
 use utils::{bmap, rng::RollbackRng};
 
-use crate::{character::player::{input::{CursorPosition, INPUT_RELOAD}, jjrs::{PeerConfig}, Player}, frame::FrameCount, global_asset::GlobalAsset};
+use crate::{character::player::{input::{CursorPosition, INPUT_RELOAD, INPUT_SWITCH_WEAPON_MODE}, jjrs::PeerConfig, Player}, collider::{Collider, CollisionLayer, CollisionSettings}, frame::FrameCount, global_asset::GlobalAsset};
 
 // ROOLBACL
 
@@ -32,7 +32,7 @@ pub enum MagBulletConfig {
     },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum BulletType {
     Standard {
         damage: f32,
@@ -42,6 +42,7 @@ pub enum BulletType {
         damage: f32,
         speed: f32,
         blast_radius: f32,
+        explosive_damage_multiplier: f32,
     },
     Piercing {
         damage: f32,
@@ -49,6 +50,12 @@ pub enum BulletType {
         penetration: u8,
     },
 }
+
+#[derive(Component)]
+pub struct ExplosiveTag;
+
+#[derive(Component)]
+pub struct PiercingTag;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct FiringModeConfig {
@@ -102,6 +109,35 @@ impl From<WeaponAsset> for Weapon {
     }
 }
 
+#[derive(Component, Clone, Serialize, Deserialize)]
+pub struct HitMarker {
+    pub target: Entity,
+    pub damage: f32,
+}
+
+
+#[derive(Component)]
+pub struct VisualEffectRequest {
+    pub effect_type: EffectType,
+    pub position: Vec2,
+    pub scale: f32,
+}
+
+#[derive(Clone)]
+pub enum EffectType {
+    BulletHit,
+    Explosion,
+    Piercing,
+}
+
+#[derive(Component, Clone, Serialize, Deserialize)]
+pub struct ExplosionMarker {
+    pub radius: f32,
+    pub damage: f32,
+    pub player_handle: PlayerHandle,
+    pub processed: bool, // Flag to ensure one-time processing
+}
+
 /// Component to mark an entity as the active weapon
 #[derive(Component)]
 pub struct ActiveWeapon;
@@ -117,6 +153,7 @@ pub struct Bullet {
     pub range: f32,
     pub distance_traveled: f32,
     pub player_handle: PlayerHandle,
+    pub created_at: u32,
 }
 
 
@@ -327,16 +364,24 @@ fn spawn_bullet_rollback(
     facing_direction: &FacingDirection,
     direction: Vec2,
     bullet_type: BulletType,
-    damage: f32,
     range: f32,
     player_handle: PlayerHandle,
     current_frame: u32,
+    collision_settings: &Res<CollisionSettings>,
 ) -> Entity {
-    let speed = match &bullet_type {
-        BulletType::Standard { speed, .. } => *speed / 60., // Convert to per-frame speed
-        BulletType::Explosive { speed, .. } => *speed / 60.,
-        BulletType::Piercing { speed, .. } => *speed / 60.,
+    let (velocity, damage, range, radius) = match &bullet_type {
+        BulletType::Standard { speed, damage: damage_bullet } => {
+            (direction * (speed / 60.0 ), *damage_bullet, range, 5.0)
+        },
+        BulletType::Explosive { speed, damage: damage_bullet, blast_radius, explosive_damage_multiplier } => {
+            (direction * (speed / 60.0), *damage_bullet, range, 8.0)
+        },
+        BulletType::Piercing { speed, damage: damage_bullet, penetration } => {
+            (direction * (speed / 60.0), *damage_bullet, range, 4.0)
+        }
     };
+
+    println!("Bullet {} {} {} {}", velocity, damage, range, radius);
 
     let color = match &bullet_type {
         BulletType::Standard { .. } => Color::BLACK,
@@ -356,23 +401,36 @@ fn spawn_bullet_rollback(
             .with_rotation(weapon_world_rotation);
     
 
-    commands.spawn((
+    let mut entity_commands = commands.spawn((
         Sprite::from_color(color, Vec2::new(10.0, 10.0)),
         Bullet {
-            velocity: direction * speed,
+            velocity,
             bullet_type,
             damage,
             range,
             distance_traveled: 0.,
             player_handle,
+            created_at: current_frame
         },
         BulletRollbackState {
             spawn_frame: current_frame,
             initial_position: firing_position_v2,
             direction,
         },
+        Collider {
+            radius,
+        },
+        CollisionLayer(collision_settings.bullet_layer),
         transform,
-    )).add_rollback().id()
+    ));
+
+    match bullet_type {
+        BulletType::Explosive { .. } =>  { entity_commands.insert(ExplosiveTag); },
+        BulletType::Piercing { .. } => { entity_commands.insert(PiercingTag); },
+        _ => {}
+    };
+
+    entity_commands.add_rollback().id()
 
 }
 
@@ -424,6 +482,8 @@ pub fn weapon_rollback_system(
     mut weapon_query: Query<(&mut Weapon, &mut WeaponState, &mut WeaponModesState, &GlobalTransform, &Parent)>,
 
     player_query: Query<(&GlobalTransform, &FacingDirection, &Player)>,
+
+    collision_settings: Res<CollisionSettings>,
 ) {
     // Process weapon firing for all players
     for (entity,  mut inventory, player) in inventory_query.iter_mut() {
@@ -443,13 +503,13 @@ pub fn weapon_rollback_system(
             let active_mode = weapon_state.active_mode.clone();
             let weapon_config = weapon.config.firing_modes.get(&active_mode).unwrap();
 
-            if input.switch_weapon_mode {
+            if input.buttons & INPUT_SWITCH_WEAPON_MODE != 0 {
                 if let Some(new_mode) = weapon_modes_state.modes.keys().find(|&x| *x != weapon_state.active_mode) {
                     if inventory.frame_switched_mode + 20 < frame.frame && inventory.frame_switched + 20 < frame.frame {
                         inventory.frame_switched_mode = frame.frame;
                         weapon_state.active_mode = new_mode.clone();
 
-                        continue;;
+                        continue;
                     }
 
                 }
@@ -564,14 +624,10 @@ pub fn weapon_rollback_system(
                                                 facing_direction,
                                                 direction,
                                                 weapon_config.bullet_type.clone(),
-                                                match &weapon_config.bullet_type {
-                                                    BulletType::Standard { damage, .. } => *damage,
-                                                    BulletType::Explosive { damage, .. } => *damage,
-                                                    BulletType::Piercing { damage, .. } => *damage,
-                                                } / pellet_count as f32, // Reduced damage per pellet
                                                 weapon_config.range,
                                                 player.handle,
                                                 frame.frame,
+                                                &collision_settings,
                                             );
                                         }
                                         weapon_mode_state.mag_ammo -= 1; // Shotgun uses one ammo for all pellets
@@ -590,14 +646,10 @@ pub fn weapon_rollback_system(
                                             facing_direction,
                                             direction,
                                             weapon_config.bullet_type.clone(),
-                                            match &weapon_config.bullet_type {
-                                                BulletType::Standard { damage, .. } => *damage,
-                                                BulletType::Explosive { damage, .. } => *damage,
-                                                BulletType::Piercing { damage, .. } => *damage,
-                                            },
                                             weapon_config.range,
                                             player.handle,
                                             frame.frame,
+                                            &collision_settings,
                                         );
                                         weapon_mode_state.mag_ammo -= 1;
 
@@ -641,6 +693,99 @@ pub fn bullet_rollback_system(
         if bullet.distance_traveled >= bullet.range {
             commands.entity(entity).despawn();
         }
+
+        // Maybe also lifetime frame
+    }
+}
+
+// Collision detection system (inside rollback)
+pub fn bullet_rollback_collision_system(
+    mut commands: Commands,
+    settings: Res<CollisionSettings>,
+    bullet_query: Query<(Entity, &Transform, &Bullet, &Collider, &CollisionLayer)>,
+    collider_query: Query<(Entity, &Transform, &Collider, &CollisionLayer), Without<Bullet>>,
+) {
+    // Track bullets to despawn after processing
+    let mut bullets_to_despawn = HashSet::new();
+    
+    for (bullet_entity, bullet_transform, bullet, bullet_collider, bullet_layer) in bullet_query.iter() {
+        // Skip already processed bullets
+        if bullets_to_despawn.contains(&bullet_entity) {
+            continue;
+        }
+        
+        let bullet_pos = bullet_transform.translation.truncate();
+        
+        for (target_entity, target_transform, target_collider, target_layer) in collider_query.iter() {
+            // Check if these layers should collide
+            if !settings.layer_matrix[bullet_layer.0 as usize][target_layer.0 as usize] {
+                continue;
+            }
+            
+            let target_pos = target_transform.translation.truncate();
+            
+            // Circle-to-circle collision detection
+            let collision_distance = bullet_collider.radius + target_collider.radius;
+            let actual_distance = bullet_pos.distance(target_pos);
+            
+            if actual_distance < collision_distance {
+                // Handle collision based on bullet type
+                match bullet.bullet_type {
+                    BulletType::Standard { .. } => {
+                        // Mark target as hit
+                        commands.entity(target_entity).insert(HitMarker {
+                            target: bullet_entity,
+                            damage: bullet.damage,
+                        });
+                        
+                        // Standard bullets are destroyed on impact
+                        bullets_to_despawn.insert(bullet_entity);
+                        break;
+                    },
+                    BulletType::Explosive { blast_radius, .. } => {
+                        commands.entity(target_entity).insert(HitMarker {
+                            target: bullet_entity,
+                            damage: bullet.damage,
+                        });
+ 
+                        // Add explosion marker to bullet entity
+                        /*
+                        commands.entity(bullet_entity).insert(ExplosionMarker {
+                            radius: blast_radius,
+                            damage: bullet.damage,
+                            player_handle: bullet.player_handle,
+                            processed: false,
+                        });
+                        */
+                        
+                        // Explosive bullets are destroyed on impact
+                        bullets_to_despawn.insert(bullet_entity);
+                        break;
+                    },
+                    BulletType::Piercing { .. } => {
+                        // Mark target as hit
+                        commands.entity(target_entity).insert(HitMarker {
+                            target: bullet_entity,
+                            damage: bullet.damage,
+                        });
+                        
+                        /*
+                        if let Some(counter) = penetration_counter {
+                            if counter.remaining <= 1 {
+                                bullets_to_despawn.insert(bullet_entity);
+                                break;
+                            }
+                            // Reduce counter in next system
+                        }*/
+                    },
+                }
+            }
+        }
+    }
+    
+    // Despawn bullets
+    for entity in bullets_to_despawn {
+        commands.entity(entity).despawn();
     }
 }
 

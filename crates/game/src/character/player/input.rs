@@ -22,6 +22,7 @@ const INPUT_DOWN: u16 = 1 << 1;
 const INPUT_LEFT: u16 = 1 << 2;
 const INPUT_RIGHT: u16 = 1 << 3;
 pub const INPUT_RELOAD: u16 = 1 << 4;
+pub const INPUT_SWITCH_WEAPON_MODE: u16 = 1 << 4;
 
 const PAN_FACING_THRESHOLD: i16 = 5;
 
@@ -34,7 +35,6 @@ pub struct BoxInput{
 
     pub fire: bool,
     pub switch_weapon: bool,
-    pub switch_weapon_mode: bool,
 }
 
 #[derive(Resource, Default, Debug, Clone, Copy)]
@@ -99,7 +99,7 @@ pub fn read_local_inputs(
             input.switch_weapon = true;
          }
          if action_state.pressed(&PlayerAction::SwitchWeaponMode) {
-            input.switch_weapon_mode = true;
+            input.buttons |= INPUT_SWITCH_WEAPON_MODE;
          }
 
          if action_state.pressed(&PlayerAction::Reload) {

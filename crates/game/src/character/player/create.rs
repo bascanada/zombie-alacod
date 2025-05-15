@@ -5,7 +5,7 @@ use leafwing_input_manager::{prelude::ActionState, InputManagerBundle};
 use utils::bmap;
 use bevy_kira_audio::prelude::*;
 
-use crate::{character::movement::Velocity, global_asset::GlobalAsset, weapons::{spawn_weapon_for_player, FiringMode, Weapon, WeaponInventory, WeaponsConfig}};
+use crate::{character::movement::Velocity, collider::{Collider, CollisionLayer, CollisionSettings}, global_asset::GlobalAsset, weapons::{spawn_weapon_for_player, FiringMode, Weapon, WeaponInventory, WeaponsConfig}};
 
 use bevy_ggrs::AddRollbackCommandExtension;
 use super::{config::{PlayerConfig, PlayerConfigHandles}, control::{get_input_map, PlayerAction}, input::CursorPosition, LocalPlayer, Player};
@@ -21,6 +21,7 @@ pub fn create_player(
     commands: &mut Commands,
     weapons_asset: &Res<Assets<WeaponsConfig>>,
     global_assets: &Res<GlobalAsset>,
+    collision_settings: &Res<CollisionSettings>,
 
     local: bool,
     handle: usize,
@@ -50,6 +51,11 @@ pub fn create_player(
             color: PLAYER_COLORS[handle].into(),
         },
         Velocity(Vec2::ZERO),
+
+        Collider {
+            radius: 15.0, // Adjust based on your player's size
+        },
+        CollisionLayer(collision_settings.player_layer),
 
         PlayerConfigHandles {
             config: player_config_handle.clone(),
