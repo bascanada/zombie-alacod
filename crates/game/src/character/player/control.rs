@@ -15,6 +15,7 @@ pub enum PlayerAction {
     Interaction,
 
     SwitchWeapon,
+    SwitchWeaponMode,
 
     Reload,
 
@@ -44,6 +45,7 @@ pub fn get_input_map() -> InputMap<PlayerAction> {
         (PlayerAction::MoveRight, KeyCode::ArrowRight),
         (PlayerAction::Interaction, KeyCode::KeyH),
         (PlayerAction::SwitchWeapon, KeyCode::Tab),
+        (PlayerAction::SwitchWeaponMode, KeyCode::KeyZ),
         (PlayerAction::Reload, KeyCode::KeyR),
         (PlayerAction::MoveCameraRight, KeyCode::ArrowRight),
         (PlayerAction::Interaction, KeyCode::KeyH)

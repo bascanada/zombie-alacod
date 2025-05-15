@@ -7,17 +7,18 @@ use ggrs::PlayerHandle;
 use serde::{Deserialize, Serialize};
 use utils::{bmap, rng::RollbackRng};
 
-use crate::{character::player::{input::{CursorPosition, INPUT_RELOAD}, jjrs::{BoxConfig, PeerConfig}, Player}, frame::FrameCount, global_asset::GlobalAsset};
+use crate::{character::player::{input::{CursorPosition, INPUT_RELOAD}, jjrs::{PeerConfig}, Player}, frame::FrameCount, global_asset::GlobalAsset};
 
 // ROOLBACL
 
 // COMPONENTS
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum FiringMode {
     Automatic{},  // Hold trigger to continuously fire
     Manual{},     // One shot per trigger pull
-    Burst{pellets_per_shot: u32},      // Fire a fixed number of shots per trigger pull
+    Burst{pellets_per_shot: u32, cooldown_frames: u32},      // Fire a fixed number of shots per trigger pull
+    Shotgun{pellet_count: u32, spread_angle: f32},
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -124,6 +125,7 @@ pub struct Bullet {
 pub struct WeaponInventory {
     pub active_weapon_index: usize,
     pub frame_switched: u32,
+    pub frame_switched_mode: u32,
     pub weapons: Vec<(Entity, Weapon)>,  // Store entity handles and weapon data
 
     pub reloading_ending_frame: Option<u32>,
@@ -134,6 +136,7 @@ impl Default for WeaponInventory {
         Self {
             active_weapon_index: 0,
             frame_switched: 0,
+            frame_switched_mode: 0,
             reloading_ending_frame: None,
             weapons: Vec::new(),
         }
@@ -155,6 +158,7 @@ pub struct WeaponModeState {
     pub burst_shots_left: u32,
 
     pub mag_size: u32,
+    pub burst_cooldown: bool,
 }
 
 
@@ -169,7 +173,6 @@ pub struct WeaponState {
     pub last_fire_frame: u32,
     pub is_firing: bool,
     pub active_mode: String,
-
 }
 
 // Rollback state for bullets
@@ -439,6 +442,19 @@ pub fn weapon_rollback_system(
         if let Ok((mut weapon, mut weapon_state, mut weapon_modes_state, weapon_transform, parent)) = weapon_query.get_mut(weapon_entity) {
             let active_mode = weapon_state.active_mode.clone();
             let weapon_config = weapon.config.firing_modes.get(&active_mode).unwrap();
+
+            if input.switch_weapon_mode {
+                if let Some(new_mode) = weapon_modes_state.modes.keys().find(|&x| *x != weapon_state.active_mode) {
+                    if inventory.frame_switched_mode + 20 < frame.frame && inventory.frame_switched + 20 < frame.frame {
+                        inventory.frame_switched_mode = frame.frame;
+                        weapon_state.active_mode = new_mode.clone();
+
+                        continue;;
+                    }
+
+                }
+            }
+
             let weapon_mode_state = weapon_modes_state.modes.get_mut(&active_mode).unwrap();
 
 
@@ -460,7 +476,9 @@ pub fn weapon_rollback_system(
                 let new_index = (inventory.active_weapon_index + 1) % inventory.weapons.len();
 
                 if new_index != inventory.active_weapon_index &&
-                    inventory.frame_switched + 20 < frame.frame {
+                    inventory.frame_switched + 20 < frame.frame &&
+                    inventory.frame_switched_mode + 20 < frame.frame  {
+
                     inventory.active_weapon_index = new_index;
                     inventory.frame_switched = frame.frame;
 
@@ -468,32 +486,54 @@ pub fn weapon_rollback_system(
                 }
             }
 
+            // TODO: fix only support two mode, take the first that is not the current
             if input.fire {
                 // Calculate fire rate in frames (60 FPS assumed) , need to be configure via ressource instead
                 let frame_per_shot = ((60. / weapon_config.firing_rate)) as u32;
                 let current_frame = frame.frame;
                 let frames_since_last_shot = current_frame - weapon_state.last_fire_frame;
 
-
-                let (can_fire, empty) = match weapon_config.firing_mode {
+               let (can_fire, empty) = match weapon_config.firing_mode {
                     FiringMode::Automatic { .. } => {
-                        (frames_since_last_shot >= frame_per_shot, weapon_mode_state.mag_ammo <= 0)
+                        (frames_since_last_shot >= frame_per_shot, weapon_mode_state.mag_ammo == 0)
                     },
+                    
                     FiringMode::Manual { .. } => {
                         (!weapon_state.is_firing && frames_since_last_shot >= frame_per_shot,
-                        weapon_mode_state.mag_ammo <= 0)
+                        weapon_mode_state.mag_ammo == 0)
                     },
-                    FiringMode::Burst { pellets_per_shot } => {
-                        if weapon_mode_state.burst_shots_left > 0 && frames_since_last_shot >= frame_per_shot && weapon_mode_state.mag_ammo > 0 {
-                            (true, true)
-                        } else if weapon_mode_state.burst_shots_left == 0 && !weapon_state.is_firing && frames_since_last_shot >= (frame_per_shot * pellets_per_shot) && weapon_mode_state.mag_ammo > 0 {
-                            weapon_mode_state.burst_shots_left = pellets_per_shot;
-                            (true, true)
+                    
+                    FiringMode::Burst { pellets_per_shot, cooldown_frames } => {
+                        if weapon_mode_state.burst_shots_left > 0 && frames_since_last_shot >= frame_per_shot {
+                            // Continue ongoing burst
+                            (true, weapon_mode_state.mag_ammo == 0)
+                        } else if weapon_mode_state.burst_shots_left == 0 {
+                            if !weapon_state.is_firing && !weapon_mode_state.burst_cooldown && frames_since_last_shot >= cooldown_frames {
+                                // Start new burst when trigger is pulled
+                                weapon_mode_state.burst_shots_left = pellets_per_shot;
+                                (true, weapon_mode_state.mag_ammo == 0)
+                            } else if weapon_mode_state.burst_cooldown && frames_since_last_shot >= cooldown_frames {
+                                // Reset cooldown
+                                weapon_mode_state.burst_cooldown = false;
+                                (false, false)
+                            } else {
+                                (false, false)
+                            }
+                        } else {
+                            (false, false)
+                        }
+                    },
+                    
+                    FiringMode::Shotgun { pellet_count, spread_angle } => {
+                        if !weapon_state.is_firing && frames_since_last_shot >= frame_per_shot {
+                            // Shotgun fires all pellets at once, so we don't need burst_shots_left
+                            (true, weapon_mode_state.mag_ammo == 0)
                         } else {
                             (false, false)
                         }
                     }
-                };
+                }; 
+
 
                 if empty {
                     inventory.start_reload(frame.frame, weapon_config.reload_time_seconds);
@@ -508,36 +548,70 @@ pub fn weapon_rollback_system(
                             input.pan_x as f32 / 127.0,
                             input.pan_y as f32 / 127.0
                         ).normalize();
+                                match weapon_config.firing_mode {
+                                    FiringMode::Shotgun { pellet_count, spread_angle } => {
+                                        // Fire multiple pellets in a spread pattern
+                                        for _ in 0..pellet_count {
+                                            // Calculate a random angle within the spread range
+                                            let pellet_angle = (rng.next_f32() - 0.5) * spread_angle;
+                                            let spread_rotation = Mat2::from_angle(pellet_angle);
+                                            let direction = spread_rotation * aim_dir;
 
-                        // need to replace with fix seed random number
-                        let spread_angle = (rng.next_f32_symmetric() - 0.5)  * weapon_config.spread;
-                        let spread_rotation = Mat2::from_angle(spread_angle);
-                        let direction = spread_rotation * aim_dir;
+                                            spawn_bullet_rollback(
+                                                &mut commands,
+                                                &weapon,
+                                                weapon_transform,
+                                                facing_direction,
+                                                direction,
+                                                weapon_config.bullet_type.clone(),
+                                                match &weapon_config.bullet_type {
+                                                    BulletType::Standard { damage, .. } => *damage,
+                                                    BulletType::Explosive { damage, .. } => *damage,
+                                                    BulletType::Piercing { damage, .. } => *damage,
+                                                } / pellet_count as f32, // Reduced damage per pellet
+                                                weapon_config.range,
+                                                player.handle,
+                                                frame.frame,
+                                            );
+                                        }
+                                        weapon_mode_state.mag_ammo -= 1; // Shotgun uses one ammo for all pellets
+                                        inventory.start_reload(frame.frame, weapon_config.reload_time_seconds);
+                                    },
+                                    _ => {
+                                        // Standard firing for Automatic, Manual, and Burst
+                                        let spread_angle = (rng.next_f32_symmetric() - 0.5) * weapon_config.spread;
+                                        let spread_rotation = Mat2::from_angle(spread_angle);
+                                        let direction = spread_rotation * aim_dir;
 
-                        spawn_bullet_rollback(
-                            &mut commands,
-                            &weapon,
-                            weapon_transform,
-                            facing_direction,
-                            direction,
-                            weapon_config.bullet_type.clone(),
-                            match &weapon_config.bullet_type {
-                                BulletType::Standard { damage, .. } => *damage,
-                                BulletType::Explosive { damage, .. } => *damage,
-                                BulletType::Piercing { damage, .. } => *damage,
-                            },
-                            weapon_config.range,
-                            player.handle,
-                            frame.frame,
-                        );
+                                        spawn_bullet_rollback(
+                                            &mut commands,
+                                            &weapon,
+                                            weapon_transform,
+                                            facing_direction,
+                                            direction,
+                                            weapon_config.bullet_type.clone(),
+                                            match &weapon_config.bullet_type {
+                                                BulletType::Standard { damage, .. } => *damage,
+                                                BulletType::Explosive { damage, .. } => *damage,
+                                                BulletType::Piercing { damage, .. } => *damage,
+                                            },
+                                            weapon_config.range,
+                                            player.handle,
+                                            frame.frame,
+                                        );
+                                        weapon_mode_state.mag_ammo -= 1;
 
-
-                        weapon_state.last_fire_frame = frame.frame;
-                        weapon_mode_state.mag_ammo -= 1;
-                        
-                        if matches!(weapon_config.firing_mode, FiringMode::Burst { .. }) && weapon_mode_state.burst_shots_left > 0 {
-                            weapon_mode_state.burst_shots_left -= 1;
-                        }
+                                        if matches!(weapon_config.firing_mode, FiringMode::Burst { .. }) && weapon_mode_state.burst_shots_left > 0 {
+                                            weapon_mode_state.burst_shots_left -= 1;
+                                            
+                                            // Set cooldown when burst finishes
+                                            if weapon_mode_state.burst_shots_left == 0 {
+                                                weapon_mode_state.burst_cooldown = true;
+                                            }
+                                        }
+                                    }
+                                }
+                                weapon_state.last_fire_frame = frame.frame;
                     }
                 }
             } else {

@@ -34,6 +34,7 @@ pub struct BoxInput{
 
     pub fire: bool,
     pub switch_weapon: bool,
+    pub switch_weapon_mode: bool,
 }
 
 #[derive(Resource, Default, Debug, Clone, Copy)]
@@ -97,6 +98,10 @@ pub fn read_local_inputs(
          if action_state.pressed(&PlayerAction::SwitchWeapon) {
             input.switch_weapon = true;
          }
+         if action_state.pressed(&PlayerAction::SwitchWeaponMode) {
+            input.switch_weapon_mode = true;
+         }
+
          if action_state.pressed(&PlayerAction::Reload) {
             input.buttons |= INPUT_RELOAD;
          }

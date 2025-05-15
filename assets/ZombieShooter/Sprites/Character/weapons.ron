@@ -19,6 +19,22 @@
                         mag_size: 6,
                         mag_limit: 8,
                     )
+                ),
+                "charging": (
+                    firing_rate: 2.0,
+                    firing_mode: Charging(min_charge_frames: 10, max_charge_frames: 180, damage_multiplier: 5.),
+                    spread: 0.05,
+                    recoil: 3.0,
+                    bullet_type: Standard(
+                        damage: 15.0,
+                        speed: 900.0,
+                    ),
+                    range: 700.0,
+                    reload_time_seconds: 1.5,
+                    mag: Mag(
+                        mag_size: 6,
+                        mag_limit: 8,
+                    )
                 )
             }
         ),
@@ -58,6 +74,22 @@
                         mag_size: 30,
                         mag_limit: 8,
                     )
+                ),
+                "rafale": (
+                    firing_rate: 10.0,
+                    firing_mode: Burst(pellets_per_shot: 3, cooldown_frames: 1),
+                    spread: 0,
+                    recoil: 1.5,
+                    bullet_type: Standard(
+                        damage: 8.0,
+                        speed: 1000.0,
+                    ),
+                    range: 900.0,
+                    reload_time_seconds: 2.5,
+                    mag: Mag(
+                        mag_size: 30,
+                        mag_limit: 8,
+                    )
                 )
             }
         ),
@@ -84,10 +116,11 @@
             firing_modes: {
                 "default": (
                     firing_rate: 1.0,
-                    firing_mode: Burst(
-                        pellets_per_shot: 6,
-                    ),
-                    spread: 0.3,
+                    firing_mode: Shotgun(
+                        pellet_count: 8,
+                        spread_angle: 0.4 // Wide spread
+                    ), 
+                    spread: 0.0,
                     recoil: 8.0,
                     mag_size: 5000,
                     bullet_type: Piercing(
@@ -102,7 +135,6 @@
                     )
                 )
             }
-
         ),
         sprite_config: (
             name: "shotgun",
