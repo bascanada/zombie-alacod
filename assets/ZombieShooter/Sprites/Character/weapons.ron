@@ -58,6 +58,22 @@
                         mag_size: 30,
                         mag_limit: 8,
                     )
+                ),
+                "rafale": (
+                    firing_rate: 10.0,
+                    firing_mode: Burst(pellets_per_shot: 3, cooldown_frames: 1),
+                    spread: 0,
+                    recoil: 1.5,
+                    bullet_type: Standard(
+                        damage: 8.0,
+                        speed: 1000.0,
+                    ),
+                    range: 900.0,
+                    reload_time_seconds: 2.5,
+                    mag: Mag(
+                        mag_size: 30,
+                        mag_limit: 8,
+                    )
                 )
             }
         ),
@@ -84,10 +100,30 @@
             firing_modes: {
                 "default": (
                     firing_rate: 1.0,
-                    firing_mode: Burst(
-                        pellets_per_shot: 6,
+                    firing_mode: Shotgun(
+                        pellet_count: 8,
+                        spread_angle: 0.4 // Wide spread
+                    ), 
+                    spread: 0.0,
+                    recoil: 8.0,
+                    mag_size: 5000,
+                    bullet_type: Standard(
+                        damage: 8.0,
+                        speed: 1000.0,
                     ),
-                    spread: 0.3,
+                    range: 400.0,
+                    reload_time_seconds: 3.0,
+                    mag: Magless(
+                        bullet_limit: 64,
+                    )
+                ),
+                "piercing": (
+                    firing_rate: 1.0,
+                    firing_mode: Shotgun(
+                        pellet_count: 8,
+                        spread_angle: 0.4 // Wide spread
+                    ), 
+                    spread: 0.0,
                     recoil: 8.0,
                     mag_size: 5000,
                     bullet_type: Piercing(
@@ -102,7 +138,6 @@
                     )
                 )
             }
-
         ),
         sprite_config: (
             name: "shotgun",

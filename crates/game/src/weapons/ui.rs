@@ -86,7 +86,7 @@ fn update_weapons_text(
         if let Ok((state, modes_state)) = weapon_query.get(active_weapon.0) {
             let active_weapon_state = modes_state.modes.get(&state.active_mode).unwrap();
             if let Ok(mut text) = q_weapon.get_single_mut() {
-                text.0 = format!("Weapon: {}", active_weapon.1.config.name);
+                text.0 = format!("Weapon: {} - {}", active_weapon.1.config.name, state.active_mode);
             }
             if let Ok(mut text) = q_ammo.get_single_mut() {
                 text.0 = format!("Ammo: {} / {}", active_weapon_state.mag_ammo, active_weapon_state.mag_quantity)

@@ -10,6 +10,7 @@ use serde::{Serialize, Deserialize};
 
 use crate::character::movement::{MovementConfig, Velocity};
 use crate::character::player::{control::PlayerAction, Player};
+use crate::collider::{is_colliding, Collider, CollisionLayer, CollisionSettings, Wall};
 
 use super::config::PlayerConfig;
 use super::config::PlayerConfigHandles;
@@ -22,6 +23,7 @@ const INPUT_DOWN: u16 = 1 << 1;
 const INPUT_LEFT: u16 = 1 << 2;
 const INPUT_RIGHT: u16 = 1 << 3;
 pub const INPUT_RELOAD: u16 = 1 << 4;
+pub const INPUT_SWITCH_WEAPON_MODE: u16 = 1 << 4;
 
 const PAN_FACING_THRESHOLD: i16 = 5;
 
@@ -97,6 +99,10 @@ pub fn read_local_inputs(
          if action_state.pressed(&PlayerAction::SwitchWeapon) {
             input.switch_weapon = true;
          }
+         if action_state.pressed(&PlayerAction::SwitchWeaponMode) {
+            input.buttons |= INPUT_SWITCH_WEAPON_MODE;
+         }
+
          if action_state.pressed(&PlayerAction::Reload) {
             input.buttons |= INPUT_RELOAD;
          }
@@ -130,6 +136,7 @@ pub fn apply_inputs(
 
     mut query: Query<(Entity, &mut Velocity, &mut ActiveLayers, &mut FacingDirection, &mut CursorPosition, &PlayerConfigHandles, &Player), With<Rollback>>,
 
+
     time: Res<Time>,
 ) {
 
@@ -149,10 +156,11 @@ pub fn apply_inputs(
             cursor_position.x = input.pan_x as i32;
             cursor_position.y = input.pan_y as i32;
 
+
             if direction != Vec2::ZERO {
-                 let move_delta = direction.normalize() * config.movement.acceleration * time.delta().as_secs_f32();
-                 velocity.0 += move_delta;
-                 velocity.0 = velocity.0.clamp_length_max(config.movement.max_speed);
+                let move_delta = direction.normalize() * config.movement.acceleration * time.delta().as_secs_f32();
+                velocity.0 += move_delta;
+                velocity.0 = velocity.0.clamp_length_max(config.movement.max_speed);
             }
         }
     }
@@ -181,12 +189,26 @@ pub fn apply_friction(
 }
 
 pub fn move_characters(
-    mut query: Query<(&mut Transform, &Velocity), With<Rollback>>,
+    mut query: Query<(&mut Transform, &mut Velocity, &Collider, &CollisionLayer), (With<Rollback>, With<Player>)>,
+    settings: Res<CollisionSettings>,
+    collider_query: Query<(Entity, &Transform, &Collider, &CollisionLayer), (With<Wall>, Without<Player>)>,
     time: Res<Time>,
 ) {
-    for (mut transform, velocity) in query.iter_mut() {
-        transform.translation.x += velocity.x * time.delta().as_secs_f32();
-        transform.translation.y += velocity.y * time.delta().as_secs_f32();
+    'mainloop: for (mut transform, mut velocity, player_collider, collision_layer) in query.iter_mut() {
+        let mut new_transform = transform.clone();
+        new_transform.translation.x += velocity.x * time.delta().as_secs_f32();
+        new_transform.translation.y += velocity.y * time.delta().as_secs_f32();
+
+        for (target_entity, target_transform, target_collider, target_layer) in collider_query.iter() {
+            if !settings.layer_matrix[collision_layer.0 as usize][target_layer.0 as usize] {
+                continue;
+            }
+            if is_colliding(&new_transform, player_collider, target_transform, target_collider) {
+                velocity.0 = Vec2::ZERO;
+                continue 'mainloop;
+            }
+        }
+        *transform = new_transform;
     }
 }
 
