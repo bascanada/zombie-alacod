@@ -6,7 +6,7 @@ use bevy_matchbox::{prelude::PeerState, MatchboxSocket};
 use ggrs::UdpNonBlockingSocket;
 use utils::rng::RollbackRng;
 
-use crate::{character::player::{create::create_player, jjrs::PeerConfig}, collider::CollisionSettings, global_asset::GlobalAsset, plugins::AppState, weapons::{WeaponAsset, WeaponsConfig}};
+use crate::{character::{enemy::create::spawn_enemy, player::{create::create_player, jjrs::PeerConfig}}, collider::CollisionSettings, global_asset::GlobalAsset, plugins::AppState, weapons::{WeaponAsset, WeaponsConfig}};
 
 pub struct GggrsConnectionConfiguration {
     pub max_player: usize,
@@ -55,6 +55,9 @@ pub fn setup_ggrs_local(
         }
         create_player(&mut commands, &weapons_asset, &global_assets, &collision_settings, local, i);
     }
+
+    
+    spawn_enemy("zombie_1".to_string(), Vec3::new(-300.0, 250.0, 0.0), &mut commands, &weapons_asset, &global_assets, &collision_settings);
 
     // Start a synctest session
     let sess = if session_config.connection.socket == false {

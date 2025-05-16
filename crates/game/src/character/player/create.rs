@@ -5,10 +5,10 @@ use leafwing_input_manager::{prelude::ActionState, InputManagerBundle};
 use utils::bmap;
 use bevy_kira_audio::prelude::*;
 
-use crate::{character::movement::Velocity, collider::{Collider, ColliderShape, CollisionLayer, CollisionSettings}, global_asset::GlobalAsset, weapons::{spawn_weapon_for_player, FiringMode, Weapon, WeaponInventory, WeaponsConfig}};
+use crate::{character::{config::CharacterConfigHandles, movement::Velocity}, collider::{Collider, ColliderShape, CollisionLayer, CollisionSettings}, global_asset::GlobalAsset, weapons::{spawn_weapon_for_player, FiringMode, Weapon, WeaponInventory, WeaponsConfig}};
 
 use bevy_ggrs::AddRollbackCommandExtension;
-use super::{config::{PlayerConfig, PlayerConfigHandles}, control::{get_input_map, PlayerAction}, input::CursorPosition, LocalPlayer, Player};
+use super::{control::{get_input_map, PlayerAction}, input::CursorPosition, LocalPlayer, Player};
 
 const PLAYER_COLORS: &'static [LinearRgba] = &[
     LinearRgba::RED,
@@ -29,7 +29,7 @@ pub fn create_player(
 
     let map_layers = global_assets.spritesheets.get("player").unwrap().clone();
     let animation_handle = global_assets.animations.get("player").unwrap().clone();
-    let player_config_handle = global_assets.player_configs.get("player").unwrap().clone();
+    let player_config_handle = global_assets.character_configs.get("player").unwrap().clone();
 
     let starting_layer = if handle < 1 {
         bmap!("shadow" => String::new(), "body" => String::new(), "shirt" => String::new())
@@ -43,7 +43,6 @@ pub fn create_player(
     let mut entity = commands.spawn((
         Transform::from_scale(Vec3::splat(6.0)).with_translation(Vec3::new(-50.0 * handle as f32, 0.0, 0.0)),
         Visibility::default(),
-
         SpatialAudioEmitter {instances: vec![]},
         CursorPosition::default(),
         Player { 
@@ -57,7 +56,7 @@ pub fn create_player(
         },
         if local {  CollisionLayer(collision_settings.player_layer) } else { CollisionLayer(collision_settings.enemy_layer) },
 
-        PlayerConfigHandles {
+        CharacterConfigHandles {
             config: player_config_handle.clone(),
         },
         animation_bundle,

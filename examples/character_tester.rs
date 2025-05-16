@@ -3,7 +3,7 @@ mod args;
 use animation::{toggle_layer, ActiveLayers, AnimationState, FacingDirection};
 use args::get_args;
 use bevy::{asset::AssetMetaCheck, prelude::*, utils::hashbrown::HashMap, window::WindowResolution};
-use game::{character::{movement::Velocity, player::{config::{PlayerConfig, PlayerConfigHandles}, control::{get_input_map, PlayerAction}, LocalPlayer, Player}}, collider::{spawn_test_wall, CollisionSettings}, frame::FrameDebugUIPlugin, jjrs::{GggrsConnectionConfiguration, GggrsSessionConfiguration}, plugins::{AppState, BaseZombieGamePlugin}};
+use game::{character::{enemy::create::spawn_enemy, movement::Velocity, player::{ control::{get_input_map, PlayerAction}, LocalPlayer, Player}}, collider::{spawn_test_wall, CollisionSettings}, frame::FrameDebugUIPlugin, global_asset::GlobalAsset, jjrs::{GggrsConnectionConfiguration, GggrsSessionConfiguration}, plugins::{AppState, BaseZombieGamePlugin}, weapons::WeaponsConfig};
 
 use utils::{web::WebPlugin};
 
@@ -65,7 +65,12 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands, collision_settings: Res<CollisionSettings>) {
+fn setup(
+    mut commands: Commands,
+    collision_settings: Res<CollisionSettings>,
+    weapons_asset: Res<Assets<WeaponsConfig>>,
+    global_assets: Res<GlobalAsset>,
+) {
     spawn_test_wall(
         &mut commands,
         Vec3::new(500.0, 250.0, 0.0),
@@ -80,5 +85,6 @@ fn setup(mut commands: Commands, collision_settings: Res<CollisionSettings>) {
         &collision_settings,
         Color::rgb(0.6, 0.3, 0.3), // Reddish color
     );
+
 
 }

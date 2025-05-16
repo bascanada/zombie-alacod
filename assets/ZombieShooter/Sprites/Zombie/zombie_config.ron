@@ -1,0 +1,7 @@
+(
+    movement: (
+        acceleration: 400.0,
+        max_speed: 400.0,
+        friction: 100.0
+    ),
+)

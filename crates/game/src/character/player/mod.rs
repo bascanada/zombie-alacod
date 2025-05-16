@@ -1,7 +1,6 @@
 pub mod control;
 pub mod jjrs;
 pub mod input;
-pub mod config;
 pub mod create;
 
 use bevy::prelude::*;

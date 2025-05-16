@@ -8,12 +8,11 @@ use bevy_ggrs::prelude::*;
 use bevy_ggrs::LocalInputs;
 use serde::{Serialize, Deserialize}; 
 
+use crate::character::config::{CharacterConfig, CharacterConfigHandles};
 use crate::character::movement::{MovementConfig, Velocity};
 use crate::character::player::{control::PlayerAction, Player};
 use crate::collider::{is_colliding, Collider, CollisionLayer, CollisionSettings, Wall};
 
-use super::config::PlayerConfig;
-use super::config::PlayerConfigHandles;
 use super::jjrs::PeerConfig;
 use super::LocalPlayer;
 
@@ -132,16 +131,16 @@ pub fn read_local_inputs(
 pub fn apply_inputs(
     mut commands: Commands,
     inputs: Res<PlayerInputs<PeerConfig>>,
-    player_configs: Res<Assets<PlayerConfig>>,
+    character_configs: Res<Assets<CharacterConfig>>,
 
-    mut query: Query<(Entity, &mut Velocity, &mut ActiveLayers, &mut FacingDirection, &mut CursorPosition, &PlayerConfigHandles, &Player), With<Rollback>>,
+    mut query: Query<(Entity, &mut Velocity, &mut ActiveLayers, &mut FacingDirection, &mut CursorPosition, &CharacterConfigHandles, &Player), With<Rollback>>,
 
 
     time: Res<Time>,
 ) {
 
     for (entity, mut velocity, mut active_layers, mut facing_direction , mut cursor_position, config_handles, player) in query.iter_mut() {
-        if let Some(config) = player_configs.get(&config_handles.config) {
+        if let Some(config) = character_configs.get(&config_handles.config) {
             let (input, _input_status) = inputs[player.handle];
 
 
@@ -168,8 +167,8 @@ pub fn apply_inputs(
 
 pub fn apply_friction(
     inputs: Res<PlayerInputs<PeerConfig>>,
-    movement_configs: Res<Assets<PlayerConfig>>,
-    mut query: Query<(&mut Velocity, &PlayerConfigHandles, &Player), With<Rollback>>,
+    movement_configs: Res<Assets<CharacterConfig>>,
+    mut query: Query<(&mut Velocity, &CharacterConfigHandles, &Player), With<Rollback>>,
     time: Res<Time>,
 ) {
     for (mut velocity, config_handles, player) in query.iter_mut() {
