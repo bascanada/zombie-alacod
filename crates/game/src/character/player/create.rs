@@ -1,11 +1,11 @@
 
 use animation::AnimationBundle;
-use bevy::{prelude::*, utils:: HashMap};
+use bevy::{math::VectorSpace, prelude::*, utils:: HashMap};
 use leafwing_input_manager::{prelude::ActionState, InputManagerBundle};
 use utils::bmap;
 use bevy_kira_audio::prelude::*;
 
-use crate::{character::movement::Velocity, collider::{Collider, CollisionLayer, CollisionSettings}, global_asset::GlobalAsset, weapons::{spawn_weapon_for_player, FiringMode, Weapon, WeaponInventory, WeaponsConfig}};
+use crate::{character::movement::Velocity, collider::{Collider, ColliderShape, CollisionLayer, CollisionSettings}, global_asset::GlobalAsset, weapons::{spawn_weapon_for_player, FiringMode, Weapon, WeaponInventory, WeaponsConfig}};
 
 use bevy_ggrs::AddRollbackCommandExtension;
 use super::{config::{PlayerConfig, PlayerConfigHandles}, control::{get_input_map, PlayerAction}, input::CursorPosition, LocalPlayer, Player};
@@ -51,11 +51,11 @@ pub fn create_player(
             color: PLAYER_COLORS[handle].into(),
         },
         Velocity(Vec2::ZERO),
-
         Collider {
-            radius: 15.0, // Adjust based on your player's size
+            offset: Vec2::new(0., -20.),
+            shape: ColliderShape::Rectangle { width: 60., height: 120. },
         },
-        CollisionLayer(collision_settings.player_layer),
+        if local {  CollisionLayer(collision_settings.player_layer) } else { CollisionLayer(collision_settings.enemy_layer) },
 
         PlayerConfigHandles {
             config: player_config_handle.clone(),
@@ -69,8 +69,6 @@ pub fn create_player(
             action_state: ActionState::default(),
             input_map: get_input_map(),
         });
-
-        info!("Adding local player with input {}", handle);
     }
     
     let entity = entity.add_rollback().id();

@@ -1,22 +1,24 @@
 use bevy::prelude::*;
 
+use crate::collider::{Collider, ColliderShape, CollisionLayer};
+
 #[derive(Resource, Default)]
-struct SpriteDebugOverlayState {
-    is_visible: bool,
+struct DebugOverlayState {
+    is_sprite_visible: bool,
+    is_hitbox_visible: bool,
 }
 
 
 fn toggle_sprite_debug_visibility_system(
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut state: ResMut<SpriteDebugOverlayState>,
+    mut state: ResMut<DebugOverlayState>,
 ) {
     if keyboard_input.just_pressed(KeyCode::KeyM) {
-        state.is_visible = !state.is_visible;
-        if state.is_visible {
-            info!("Sprite debug overlay: ON");
-        } else {
-            info!("Sprite debug overlay: OFF");
-        }
+        state.is_sprite_visible = !state.is_sprite_visible;
+    }
+
+    if keyboard_input.just_pressed(KeyCode::KeyN) {
+        state.is_hitbox_visible = !state.is_hitbox_visible;
     }
 }
 
@@ -65,6 +67,37 @@ fn draw_sprite_debug_rects_system(
     }
 }
 
+pub fn debug_draw_colliders_system(
+    mut gizmos: Gizmos,
+    collider_query: Query<(&Transform, &Collider, &CollisionLayer)>,
+) {
+    // Draw regular colliders
+    for (transform, collider, layer) in collider_query.iter() {
+        let color = match layer.0 {
+            0 => LinearRgba::RED,        // Bullets
+            1 => LinearRgba::GREEN,      // Enemies
+            2 => LinearRgba::BLUE,       // Environment
+            3 => LinearRgba::WHITE,     // Players
+            _ => LinearRgba::BLACK,       // Unknown
+        };
+
+        match collider.shape {
+            ColliderShape::Circle { radius } => {
+                gizmos.circle_2d(
+                    transform.translation.truncate() + collider.offset,
+                    radius,
+                    color,
+                );
+            },
+            ColliderShape::Rectangle { width, height } => {
+                gizmos.rect_2d(transform.translation.truncate() + collider.offset, Vec2::new(width, height), color);
+            }
+        }
+        
+    }
+}
+
+
 
 pub struct SpriteDebugOverlayPlugin;
 
@@ -77,13 +110,15 @@ impl Plugin for SpriteDebugOverlayPlugin {
         }
 
         app
-            .init_resource::<SpriteDebugOverlayState>()
+            .init_resource::<DebugOverlayState>()
             .add_systems(Update,
                 (
                     toggle_sprite_debug_visibility_system,
                     // Apply the run condition for the drawing system
                     draw_sprite_debug_rects_system
-                        .run_if(|state: Res<SpriteDebugOverlayState>| state.is_visible),
+                        .run_if(|state: Res<DebugOverlayState>| state.is_sprite_visible),
+                    debug_draw_colliders_system
+                        .run_if(|state: Res<DebugOverlayState>| state.is_hitbox_visible),
                 )
             );
     }

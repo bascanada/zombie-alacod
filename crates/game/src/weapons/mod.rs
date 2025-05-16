@@ -1,13 +1,13 @@
 pub mod ui;
 
 use animation::{AnimationBundle, FacingDirection};
-use bevy::{prelude::*, utils::{HashMap, HashSet}};
+use bevy::{math::VectorSpace, prelude::*, utils::{HashMap, HashSet}};
 use bevy_ggrs::{AddRollbackCommandExtension, PlayerInputs, Rollback};
 use ggrs::PlayerHandle;
 use serde::{Deserialize, Serialize};
 use utils::{bmap, rng::RollbackRng};
 
-use crate::{character::player::{input::{CursorPosition, INPUT_RELOAD, INPUT_SWITCH_WEAPON_MODE}, jjrs::PeerConfig, Player}, collider::{Collider, CollisionLayer, CollisionSettings}, frame::FrameCount, global_asset::GlobalAsset};
+use crate::{character::player::{input::{CursorPosition, INPUT_RELOAD, INPUT_SWITCH_WEAPON_MODE}, jjrs::PeerConfig, Player}, collider::{is_colliding, Collider, ColliderShape, CollisionLayer, CollisionSettings, Wall}, frame::FrameCount, global_asset::GlobalAsset};
 
 // ROOLBACL
 
@@ -368,6 +368,7 @@ fn spawn_bullet_rollback(
     player_handle: PlayerHandle,
     current_frame: u32,
     collision_settings: &Res<CollisionSettings>,
+    parent_layer: &CollisionLayer,
 ) -> Entity {
     let (velocity, damage, range, radius) = match &bullet_type {
         BulletType::Standard { speed, damage: damage_bullet } => {
@@ -377,11 +378,9 @@ fn spawn_bullet_rollback(
             (direction * (speed / 60.0), *damage_bullet, range, 8.0)
         },
         BulletType::Piercing { speed, damage: damage_bullet, penetration } => {
-            (direction * (speed / 60.0), *damage_bullet, range, 4.0)
+            (direction * (speed / 60.0), *damage_bullet, range, 5.0)
         }
     };
-
-    println!("Bullet {} {} {} {}", velocity, damage, range, radius);
 
     let color = match &bullet_type {
         BulletType::Standard { .. } => Color::BLACK,
@@ -418,9 +417,10 @@ fn spawn_bullet_rollback(
             direction,
         },
         Collider {
-            radius,
+            offset: Vec2::ZERO,
+            shape: ColliderShape::Circle { radius },
         },
-        CollisionLayer(collision_settings.bullet_layer),
+        CollisionLayer(parent_layer.0),
         transform,
     ));
 
@@ -478,7 +478,7 @@ pub fn weapon_rollback_system(
     inputs: Res<PlayerInputs<PeerConfig>>,
     frame: Res<FrameCount>,
 
-    mut inventory_query: Query<(Entity, &mut WeaponInventory, &Player)>,
+    mut inventory_query: Query<(Entity, &mut WeaponInventory, &CollisionLayer, &Player)>,
     mut weapon_query: Query<(&mut Weapon, &mut WeaponState, &mut WeaponModesState, &GlobalTransform, &Parent)>,
 
     player_query: Query<(&GlobalTransform, &FacingDirection, &Player)>,
@@ -486,7 +486,7 @@ pub fn weapon_rollback_system(
     collision_settings: Res<CollisionSettings>,
 ) {
     // Process weapon firing for all players
-    for (entity,  mut inventory, player) in inventory_query.iter_mut() {
+    for (entity,  mut inventory, collision_layer, player) in inventory_query.iter_mut() {
         let (input, _input_status) = inputs[player.handle];
 
         // Do nothing if no weapons
@@ -628,6 +628,7 @@ pub fn weapon_rollback_system(
                                                 player.handle,
                                                 frame.frame,
                                                 &collision_settings,
+                                                collision_layer,
                                             );
                                         }
                                         weapon_mode_state.mag_ammo -= 1; // Shotgun uses one ammo for all pellets
@@ -650,6 +651,7 @@ pub fn weapon_rollback_system(
                                             player.handle,
                                             frame.frame,
                                             &collision_settings,
+                                            collision_layer,
                                         );
                                         weapon_mode_state.mag_ammo -= 1;
 
@@ -703,7 +705,7 @@ pub fn bullet_rollback_collision_system(
     mut commands: Commands,
     settings: Res<CollisionSettings>,
     bullet_query: Query<(Entity, &Transform, &Bullet, &Collider, &CollisionLayer)>,
-    collider_query: Query<(Entity, &Transform, &Collider, &CollisionLayer), Without<Bullet>>,
+    collider_query: Query<(Entity, &Transform, &Collider, &CollisionLayer, Option<&Wall>), Without<Bullet>>,
 ) {
     // Track bullets to despawn after processing
     let mut bullets_to_despawn = HashSet::new();
@@ -714,21 +716,14 @@ pub fn bullet_rollback_collision_system(
             continue;
         }
         
-        let bullet_pos = bullet_transform.translation.truncate();
-        
-        for (target_entity, target_transform, target_collider, target_layer) in collider_query.iter() {
+        for (target_entity, target_transform, target_collider, target_layer, opt_wall) in collider_query.iter() {
             // Check if these layers should collide
             if !settings.layer_matrix[bullet_layer.0 as usize][target_layer.0 as usize] {
                 continue;
             }
             
-            let target_pos = target_transform.translation.truncate();
-            
-            // Circle-to-circle collision detection
-            let collision_distance = bullet_collider.radius + target_collider.radius;
-            let actual_distance = bullet_pos.distance(target_pos);
-            
-            if actual_distance < collision_distance {
+            // Check for collision using our new helper function
+            if is_colliding(bullet_transform, bullet_collider, target_transform, target_collider) { 
                 // Handle collision based on bullet type
                 match bullet.bullet_type {
                     BulletType::Standard { .. } => {
@@ -768,7 +763,11 @@ pub fn bullet_rollback_collision_system(
                             target: bullet_entity,
                             damage: bullet.damage,
                         });
-                        
+
+                        if opt_wall.is_some() {
+                            bullets_to_despawn.insert(bullet_entity);
+                            break;
+                        }
                         /*
                         if let Some(counter) = penetration_counter {
                             if counter.remaining <= 1 {

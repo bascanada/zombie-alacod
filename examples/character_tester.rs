@@ -3,7 +3,7 @@ mod args;
 use animation::{toggle_layer, ActiveLayers, AnimationState, FacingDirection};
 use args::get_args;
 use bevy::{asset::AssetMetaCheck, prelude::*, utils::hashbrown::HashMap, window::WindowResolution};
-use game::{character::{movement::Velocity, player::{config::{PlayerConfig, PlayerConfigHandles}, control::{get_input_map, PlayerAction}, LocalPlayer, Player}}, frame::FrameDebugUIPlugin, jjrs::{GggrsConnectionConfiguration, GggrsSessionConfiguration}, plugins::BaseZombieGamePlugin};
+use game::{character::{movement::Velocity, player::{config::{PlayerConfig, PlayerConfigHandles}, control::{get_input_map, PlayerAction}, LocalPlayer, Player}}, collider::{spawn_test_wall, CollisionSettings}, frame::FrameDebugUIPlugin, jjrs::{GggrsConnectionConfiguration, GggrsSessionConfiguration}, plugins::{AppState, BaseZombieGamePlugin}};
 
 use utils::{web::WebPlugin};
 
@@ -60,6 +60,25 @@ fn main() {
         .add_plugins(FrameDebugUIPlugin)
         .add_plugins(BaseZombieGamePlugin::new(matchbox != ""))
         .insert_resource(GggrsSessionConfiguration { matchbox: matchbox != "", lobby: lobby.clone(), matchbox_url: matchbox.clone(), connection: GggrsConnectionConfiguration { input_delay: 5, max_player: nbr_player, desync_interval: 10, socket: players.len() > 1, udp_port: local_port}, players: players })
+        .add_systems(OnEnter(AppState::InGame), setup)
         .add_systems(Update, character_equipment_system)
         .run();
+}
+
+fn setup(mut commands: Commands, collision_settings: Res<CollisionSettings>) {
+    spawn_test_wall(
+        &mut commands,
+        Vec3::new(500.0, 250.0, 0.0),
+        Vec2::new(125.0, 500.0),
+        &collision_settings,
+        Color::rgb(0.6, 0.3, 0.3), // Reddish color
+    );
+    spawn_test_wall(
+        &mut commands,
+        Vec3::new(-500.0, 250.0, 0.0),
+        Vec2::new(125.0, 500.0),
+        &collision_settings,
+        Color::rgb(0.6, 0.3, 0.3), // Reddish color
+    );
+
 }

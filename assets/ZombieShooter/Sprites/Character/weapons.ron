@@ -107,6 +107,25 @@
                     spread: 0.0,
                     recoil: 8.0,
                     mag_size: 5000,
+                    bullet_type: Standard(
+                        damage: 8.0,
+                        speed: 1000.0,
+                    ),
+                    range: 400.0,
+                    reload_time_seconds: 3.0,
+                    mag: Magless(
+                        bullet_limit: 64,
+                    )
+                ),
+                "piercing": (
+                    firing_rate: 1.0,
+                    firing_mode: Shotgun(
+                        pellet_count: 8,
+                        spread_angle: 0.4 // Wide spread
+                    ), 
+                    spread: 0.0,
+                    recoil: 8.0,
+                    mag_size: 5000,
                     bullet_type: Piercing(
                         damage: 10.0,
                         speed: 700.0,

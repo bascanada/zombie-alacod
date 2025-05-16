@@ -9,7 +9,7 @@ use map::{
     },
 };
 use utils::{
-    camera::tod::{move_camera},
+    camera::tod::{move_camera, setup_camera},
     web::WebPlugin,
 };
 
@@ -45,7 +45,7 @@ fn main() {
                 .set(window_plugin),
         )
         .add_plugins(MyWorldInspectorPlugin)
-        .add_systems(Startup, setup_generated_map)
+        .add_systems(Startup, (setup_generated_map, setup_camera))
         .add_plugins(LdtkRoguePlugin)
         .insert_resource(map_generation_config)
         .register_asset_loader(level_loader)
