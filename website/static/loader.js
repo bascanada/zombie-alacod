@@ -3,7 +3,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const matchbox = urlParams.get("matchbox");
     const lobby_size = urlParams.get("lobby_size");
     const lobby = urlParams.get("lobby");
-    const name = "./" + urlParams.get("name") + "/wasm.js";
+    const version = urlParams.get("version");
+    const name = "./" + version + "/" + urlParams.get("name") + "/wasm.js";
 
     if (matchbox && matchbox.length > 0) {
       let canvas = document.getElementById("bevy-canvas");

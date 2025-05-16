@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::plugins::GameInfo;
+
 // You can also register resources.
 #[derive(Resource, Default, Reflect, Hash, Clone, Copy)]
 #[reflect(Hash)]
@@ -43,10 +45,11 @@ fn setup_frame_counter_ui(mut commands: Commands, asset_server: Res<AssetServer>
 
 fn update_frame_counter_text(
     frame_count: Res<FrameCount>, // Access the FrameCount resource
+    game_info: Res<GameInfo>,
     mut query: Query<&mut Text, With<FrameCountText>>, // Query for mutable Text components with our marker
 ) {
     if let Ok(mut text) = query.get_single_mut() {
-        text.0 = format!("Frame: {}", frame_count.frame);
+        text.0 = format!("{} : {}", game_info.version, frame_count.frame);
     } else {
         // Optional: Log a warning if the text entity wasn't found or multiple exist.
         warn!("Could not find unique FrameCountText entity to update.");

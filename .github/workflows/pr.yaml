@@ -33,22 +33,6 @@ jobs:
         run: sudo apt-get install g++ make pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0 libwayland-dev libxkbcommon-dev && rustup component add rustfmt
       - name: Dependencies
         run: cargo vendor && (make dep_web || echo "ok")
-      - name: Generate version number
-        id: generate_version
-        run: |
-          # Get the latest tag
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          
-          # Get the short SHA
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          
-          BRANCH=$(echo ${{ github.ref }} | sed 's/refs\/heads\///')
-          VERSION="${LATEST_TAG}-${BRANCH}-${SHORT_SHA}"
-          
-          echo "VERSION=${VERSION}" >> $GITHUB_ENV
-          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
-          
-          echo "Generated version: $VERSION" 
       - name: Test
         run: make test
       - name: Style Check

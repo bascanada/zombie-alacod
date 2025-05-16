@@ -18,6 +18,17 @@ pub enum AppState {
     InGame,
 }
 
+#[derive(Debug, Clone, Resource)]
+pub struct GameInfo {
+    pub version: String,
+}
+
+impl Default for GameInfo {
+    fn default() -> Self {
+        Self { version: env!("APP_VERSION").into() }
+    } 
+}
+
 pub struct BaseZombieGamePlugin { online: bool }
 
 impl BaseZombieGamePlugin {
@@ -28,6 +39,7 @@ impl BaseZombieGamePlugin {
 
 impl Plugin for BaseZombieGamePlugin {
     fn build(&self, app: &mut App) {
+        app.init_resource::<GameInfo>();
         app.add_plugins(SpriteDebugOverlayPlugin{});
 
         app.add_plugins(ZAudioPlugin {});

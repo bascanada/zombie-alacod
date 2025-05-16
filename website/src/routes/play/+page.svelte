@@ -15,6 +15,8 @@
     import { onMount } from 'svelte';
 	  import { settingsStore } from '../settings/settingsStore';
 
+    const customAppVersion: string = import.meta.env.VITE_APP_VERSION || "DEV";
+
 
     let src = "";
 
@@ -26,7 +28,7 @@
 
         if (online == "true") {
             const unsubscribe = settingsStore.subscribe(settings => {
-                const setSrc = (online: boolean) => src = `/loader.html?name=${id}&lobby=${settings.lobbyName}` + (online ? `&matchbox=${settings.matchboxServer}&lobby_size=${settings.playerCount}` : "" );
+                const setSrc = (online: boolean) => src = `/loader.html?name=${id}&lobby=${settings.lobbyName}&version=${customAppVersion}` + (online ? `&matchbox=${settings.matchboxServer}&lobby_size=${settings.playerCount}` : "" );
                 const elemModal: HTMLDialogElement | null = document.querySelector('[data-dialog]');
                 const elemTrigger: HTMLButtonElement | null = document.querySelector('[data-dialog-yes]');
                 const elemClose: HTMLButtonElement | null = document.querySelector('[data-dialog-no]');

@@ -39,28 +39,12 @@ jobs:
         run: sudo apt-get install g++ make pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0 libwayland-dev libxkbcommon-dev && rustup component add rustfmt
       - name: Dependencies
         run: cargo vendor && (make dep_web || echo "ok")
-      - name: Generate version number
-        id: generate_version
-        run: |
-          # Get the latest tag
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          
-          # Get the short SHA
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          
-          # Combine them for the version
-          VERSION="${LATEST_TAG}-${SHORT_SHA}"
-          
-          echo "VERSION=${VERSION}" >> $GITHUB_ENV
-          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
-          
-          echo "Generated version: $VERSION" 
       - name: Test
         run: make test
       - name: Style Check
         run: make format
       - name: Build web
-        run:  APP_VERSION="${{ env.VERSION }}" make build_docker_website TARGET=web PROFILE=prod
+        run:  make build_docker_website TARGET=web PROFILE=prod
       - name: Build matchbox
         run: make build_docker_matchbox_server 
       - name: Publish docker matchbox

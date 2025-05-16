@@ -4,7 +4,7 @@
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
-		"dev": "vite dev",
+		"dev": "VITE_APP_VERSION=${APP_VERSION} vite dev",
 		"build": "VITE_APP_VERSION=${APP_VERSION} vite build",
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
