@@ -1,13 +1,13 @@
 pub mod ui;
 
 use animation::{AnimationBundle, FacingDirection};
-use bevy::{math::VectorSpace, prelude::*, utils::{HashMap, HashSet}};
+use bevy::{prelude::*, utils::{HashMap, HashSet}};
 use bevy_ggrs::{AddRollbackCommandExtension, PlayerInputs, Rollback};
 use ggrs::PlayerHandle;
 use serde::{Deserialize, Serialize};
 use utils::{bmap, rng::RollbackRng};
 
-use crate::{character::player::{input::{CursorPosition, INPUT_RELOAD, INPUT_SWITCH_WEAPON_MODE}, jjrs::PeerConfig, Player}, collider::{is_colliding, Collider, ColliderShape, CollisionLayer, CollisionSettings, Wall}, frame::FrameCount, global_asset::GlobalAsset};
+use crate::{character::player::{input::{CursorPosition, INPUT_RELOAD, INPUT_SWITCH_WEAPON_MODE}, jjrs::PeerConfig, Player}, collider::{is_colliding, weight::{calculate_physics_push, PushAccumulator, Weight}, Collider, ColliderShape, CollisionLayer, CollisionSettings, Wall}, frame::FrameCount, global_asset::GlobalAsset};
 
 // ROOLBACL
 
@@ -64,6 +64,8 @@ pub struct FiringModeConfig {
     pub spread: f32,
     pub recoil: f32,
     pub bullet_type: BulletType,
+    pub bullet_weight_factor: f32,
+    pub bullet_weight: f32,
     pub range: f32,
 
     pub reload_time_seconds: f32,
@@ -363,26 +365,25 @@ fn spawn_bullet_rollback(
     weapon_transform: &GlobalTransform,
     facing_direction: &FacingDirection,
     direction: Vec2,
-    bullet_type: BulletType,
-    range: f32,
+    firing_mode: &FiringModeConfig,
     player_handle: PlayerHandle,
     current_frame: u32,
     collision_settings: &Res<CollisionSettings>,
     parent_layer: &CollisionLayer,
 ) -> Entity {
-    let (velocity, damage, range, radius) = match &bullet_type {
+    let (velocity, damage, radius) = match &firing_mode.bullet_type {
         BulletType::Standard { speed, damage: damage_bullet } => {
-            (direction * (speed / 60.0 ), *damage_bullet, range, 5.0)
+            (direction * (speed / 60.0 ), *damage_bullet, 5.0)
         },
         BulletType::Explosive { speed, damage: damage_bullet, blast_radius, explosive_damage_multiplier } => {
-            (direction * (speed / 60.0), *damage_bullet, range, 8.0)
+            (direction * (speed / 60.0), *damage_bullet, 8.0)
         },
         BulletType::Piercing { speed, damage: damage_bullet, penetration } => {
-            (direction * (speed / 60.0), *damage_bullet, range, 5.0)
+            (direction * (speed / 60.0), *damage_bullet, 5.0)
         }
     };
 
-    let color = match &bullet_type {
+    let color = match &firing_mode.bullet_type {
         BulletType::Standard { .. } => Color::BLACK,
         BulletType::Explosive { .. } => Color::WHITE,
         BulletType::Piercing { .. } => Color::BLACK,
@@ -404,12 +405,16 @@ fn spawn_bullet_rollback(
         Sprite::from_color(color, Vec2::new(10.0, 10.0)),
         Bullet {
             velocity,
-            bullet_type,
+            bullet_type: firing_mode.bullet_type,
             damage,
-            range,
+            range: firing_mode.range,
             distance_traveled: 0.,
             player_handle,
             created_at: current_frame
+        },
+        Weight {
+            mass: firing_mode.bullet_weight,
+            factor: Some(firing_mode.bullet_weight_factor),
         },
         BulletRollbackState {
             spawn_frame: current_frame,
@@ -424,7 +429,7 @@ fn spawn_bullet_rollback(
         transform,
     ));
 
-    match bullet_type {
+    match firing_mode.bullet_type {
         BulletType::Explosive { .. } =>  { entity_commands.insert(ExplosiveTag); },
         BulletType::Piercing { .. } => { entity_commands.insert(PiercingTag); },
         _ => {}
@@ -623,8 +628,7 @@ pub fn weapon_rollback_system(
                                                 weapon_transform,
                                                 facing_direction,
                                                 direction,
-                                                weapon_config.bullet_type.clone(),
-                                                weapon_config.range,
+                                                &weapon_config,
                                                 player.handle,
                                                 frame.frame,
                                                 &collision_settings,
@@ -646,8 +650,7 @@ pub fn weapon_rollback_system(
                                             weapon_transform,
                                             facing_direction,
                                             direction,
-                                            weapon_config.bullet_type.clone(),
-                                            weapon_config.range,
+                                            &weapon_config,
                                             player.handle,
                                             frame.frame,
                                             &collision_settings,
@@ -703,25 +706,58 @@ pub fn bullet_rollback_system(
 // Collision detection system (inside rollback)
 pub fn bullet_rollback_collision_system(
     mut commands: Commands,
+    frame: Res<FrameCount>,
     settings: Res<CollisionSettings>,
-    bullet_query: Query<(Entity, &Transform, &Bullet, &Collider, &CollisionLayer)>,
-    collider_query: Query<(Entity, &Transform, &Collider, &CollisionLayer, Option<&Wall>), Without<Bullet>>,
+    bullet_query: Query<(Entity, &Transform, &Bullet, &Collider, &CollisionLayer, &Weight)>,
+    mut collider_query: Query<(Entity, &Transform, &Collider, &CollisionLayer, Option<&Wall>, Option<&Weight>, Option<&mut PushAccumulator>), Without<Bullet>>,
 ) {
     // Track bullets to despawn after processing
     let mut bullets_to_despawn = HashSet::new();
     
-    for (bullet_entity, bullet_transform, bullet, bullet_collider, bullet_layer) in bullet_query.iter() {
+    for (bullet_entity, bullet_transform, bullet, bullet_collider, bullet_layer, bullet_weight) in bullet_query.iter() {
         // Skip already processed bullets
         if bullets_to_despawn.contains(&bullet_entity) {
             continue;
         }
         
-        for (target_entity, target_transform, target_collider, target_layer, opt_wall) in collider_query.iter() {
+        for (target_entity, target_transform, target_collider, target_layer, opt_wall, opt_weight, opt_push_acc) in collider_query.iter_mut() {
             // Check if these layers should collide
             if !settings.layer_matrix[bullet_layer.0 as usize][target_layer.0 as usize] {
                 continue;
             }
-            
+
+
+            if let Some(target_weight) = opt_weight {
+                // Calculate impact factor based on bullet type
+                let push_factor = bullet_weight.factor.unwrap_or(0.1);
+                
+                // Calculate push velocity
+                let push_velocity = calculate_physics_push(
+                    bullet_weight.mass,
+                    bullet.velocity,
+                    target_weight.mass,
+                    push_factor
+                );
+
+                // Add the PushImpact at the end of the frame to accumulate impacts
+                // Check if entity already has a PushAccumulator component
+                match opt_push_acc {
+                    Some(mut accumulator) => {
+                        // Add to existing accumulator
+                        accumulator.total_velocity += push_velocity;
+                        accumulator.count += 1;
+                    },
+                    None => {
+                        // Create new accumulator
+                        commands.entity(target_entity).add_rollback().insert(PushAccumulator {
+                            total_velocity: push_velocity,
+                            count: 1,
+                            frame: frame.frame,
+                        });
+                    }
+                }
+            }
+        
             // Check for collision using our new helper function
             if is_colliding(bullet_transform, bullet_collider, target_transform, target_collider) { 
                 // Handle collision based on bullet type
@@ -732,7 +768,7 @@ pub fn bullet_rollback_collision_system(
                             target: bullet_entity,
                             damage: bullet.damage,
                         });
-                        
+
                         // Standard bullets are destroyed on impact
                         bullets_to_despawn.insert(bullet_entity);
                         break;

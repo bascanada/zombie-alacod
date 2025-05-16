@@ -1,3 +1,5 @@
+pub mod weight;
+
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -17,6 +19,8 @@ pub struct Collider {
 
 #[derive(Component)]
 pub struct Wall;
+
+
 
 
 #[derive(Component, Clone, Serialize, Deserialize)]

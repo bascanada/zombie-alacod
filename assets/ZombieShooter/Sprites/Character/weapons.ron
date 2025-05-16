@@ -13,6 +13,8 @@
                         damage: 15.0,
                         speed: 900.0,
                     ),
+                    bullet_weight: 10.0,
+                    bullet_weight_factor: 10.0,
                     range: 700.0,
                     reload_time_seconds: 1.5,
                     mag: Mag(
@@ -52,6 +54,8 @@
                         damage: 8.0,
                         speed: 1000.0,
                     ),
+                    bullet_weight: 10.0,
+                    bullet_weight_factor: 1.0,
                     range: 900.0,
                     reload_time_seconds: 2.5,
                     mag: Mag(
@@ -68,6 +72,8 @@
                         damage: 8.0,
                         speed: 1000.0,
                     ),
+                    bullet_weight: 20.0,
+                    bullet_weight_factor: 5.0,
                     range: 900.0,
                     reload_time_seconds: 2.5,
                     mag: Mag(
@@ -111,6 +117,8 @@
                         damage: 8.0,
                         speed: 1000.0,
                     ),
+                    bullet_weight: 10.0,
+                    bullet_weight_factor: 1.0,
                     range: 400.0,
                     reload_time_seconds: 3.0,
                     mag: Magless(
@@ -131,6 +139,8 @@
                         speed: 700.0,
                         penetration: 1,
                     ),
+                    bullet_weight: 10.0,
+                    bullet_weight_factor: 1.0,
                     range: 400.0,
                     reload_time_seconds: 3.0,
                     mag: Magless(
