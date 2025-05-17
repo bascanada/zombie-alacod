@@ -33,7 +33,7 @@ pub fn create_player(
         commands, global_assets, character_asset, 
         "player".into(), Some(if local { "1" } else { "2" }.into()),
         Vec3::new(-50.0 * handle as f32, 0.0, 0.0),
-        if local {  CollisionLayer(collision_settings.player_layer) } else { CollisionLayer(collision_settings.enemy_layer) },
+        CollisionLayer(collision_settings.player_layer),
     );
 
     if local {

@@ -7,7 +7,7 @@ use crate::{character::{config::CharacterConfigHandles, movement::Velocity}, col
 
 use bevy_ggrs::AddRollbackCommandExtension;
 
-use super::config::CharacterConfig;
+use super::{config::CharacterConfig, health::{ui::HealthBar, DamageAccumulator, Health}};
 
 pub fn create_character(
     commands: &mut Commands,
@@ -35,12 +35,15 @@ pub fn create_character(
         AnimationBundle::new(map_layers, animation_handle.clone(),0, starting_layer);
 
     let collider: Collider = (&config.collider).into();
+    let health: Health = config.base_health.clone().into();
     let mut entity = commands.spawn((
         Transform::from_scale(Vec3::splat(config.scale)).with_translation(translation),
         Visibility::default(),
         SpatialAudioEmitter {instances: vec![]},
         Velocity(Vec2::ZERO),
         collider,
+        health,
+        DamageAccumulator::default(),
         collision_layer,
         CharacterConfigHandles {
             config: player_config_handle.clone(),

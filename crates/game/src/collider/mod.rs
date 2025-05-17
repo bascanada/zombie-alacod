@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_ggrs::AddRollbackCommandExtension;
 use serde::{Deserialize, Serialize};
 
 
@@ -29,7 +30,7 @@ pub struct Collider {
 }
 
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct Wall;
 
 
@@ -161,16 +162,13 @@ pub fn spawn_test_wall(
     size: Vec2,
     collision_settings: &Res<CollisionSettings>,
     color: Color,
-) -> Entity {
+) {
     commands.spawn((
         Wall,
-        SpriteBundle {
-            transform: Transform::from_translation(position),
-            sprite: Sprite {
-                color,
-                custom_size: Some(size),
-                ..Default::default()
-            },
+        Transform::from_translation(position),
+        Sprite {
+            color,
+            custom_size: Some(size),
             ..Default::default()
         },
         Collider {
@@ -181,5 +179,5 @@ pub fn spawn_test_wall(
             offset: Vec2::ZERO,
         },
         CollisionLayer(collision_settings.wall_layer),
-    )).id()
+    )).add_rollback();
 }

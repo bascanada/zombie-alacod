@@ -2,6 +2,8 @@ use bevy::prelude::*;
 
 use crate::{character::{config::{CharacterConfig, CharacterConfigHandles}, create::create_character, movement::Velocity, player::input::CursorPosition}, collider::{Collider, ColliderShape, CollisionLayer, CollisionSettings}, global_asset::GlobalAsset, weapons::{WeaponInventory, WeaponsConfig}};
 
+use super::Enemy;
+
 pub fn spawn_enemy(
     enemy_type_name: String,
     position: Vec3,
@@ -24,6 +26,7 @@ pub fn spawn_enemy(
     commands.entity(entity)
         .insert((
             inventory,
+            Enemy::default(),
         ));
 
 }

@@ -3,6 +3,8 @@ use serde::Deserialize;
 
 use crate::{character::movement::MovementConfig, collider::{Collider, ColliderConfig}};
 
+use super::health::HealthConfig;
+
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct CharacterSkin {
@@ -14,6 +16,8 @@ pub struct CharacterConfig {
     pub movement: MovementConfig,
 
     pub asset_name_ref: String,
+
+    pub base_health: HealthConfig,
 
     pub collider: ColliderConfig,
 
