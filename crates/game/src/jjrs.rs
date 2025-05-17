@@ -6,7 +6,7 @@ use bevy_matchbox::{prelude::PeerState, MatchboxSocket};
 use ggrs::UdpNonBlockingSocket;
 use utils::rng::RollbackRng;
 
-use crate::{character::{enemy::create::spawn_enemy, player::{create::create_player, jjrs::PeerConfig}}, collider::CollisionSettings, global_asset::GlobalAsset, plugins::AppState, weapons::{WeaponAsset, WeaponsConfig}};
+use crate::{character::{config::CharacterConfig, enemy::create::spawn_enemy, player::{create::create_player, jjrs::PeerConfig}}, collider::CollisionSettings, global_asset::GlobalAsset, plugins::AppState, weapons::{WeaponAsset, WeaponsConfig}};
 
 pub struct GggrsConnectionConfiguration {
     pub max_player: usize,
@@ -33,6 +33,7 @@ pub fn setup_ggrs_local(
     mut commands: Commands,
     collision_settings: Res<CollisionSettings>,
     global_assets: Res<GlobalAsset>,
+    character_asset: Res<Assets<CharacterConfig>>,
     weapons_asset: Res<Assets<WeaponsConfig>>,
     session_config: Res<GggrsSessionConfiguration>,
 ) {
@@ -53,11 +54,11 @@ pub fn setup_ggrs_local(
             let remote_addr: SocketAddr = addr.parse().unwrap();
             //sess_build = sess_build.add_player(PlayerType::Remote(remote_addr), i).expect("Failed to add player");
         }
-        create_player(&mut commands, &weapons_asset, &global_assets, &collision_settings, local, i);
+        create_player(&mut commands, &global_assets, &weapons_asset,  &character_asset, &collision_settings, local, i);
     }
 
     
-    spawn_enemy("zombie_1".to_string(), Vec3::new(-300.0, 250.0, 0.0), &mut commands, &weapons_asset, &global_assets, &collision_settings);
+    spawn_enemy("zombie_1".to_string(), Vec3::new(-300.0, 250.0, 0.0), &mut commands, &weapons_asset, &character_asset, &global_assets, &collision_settings);
 
     // Start a synctest session
     let sess = if session_config.connection.socket == false {
@@ -94,6 +95,7 @@ pub fn start_matchbox_socket(mut commands: Commands, ggrs_config: Res<GggrsSessi
 
 pub fn wait_for_players(
     mut app_state: ResMut<NextState<AppState>>,
+    character_asset: Res<Assets<CharacterConfig>>,
 
     collision_settings: Res<CollisionSettings>,
 
@@ -136,7 +138,7 @@ pub fn wait_for_players(
             .expect("failed to add player");
 
         
-        create_player(&mut commands, &weapons_asset, &global_assets, &collision_settings, matches!(player, PlayerType::Local), i);
+        create_player(&mut commands, &global_assets, &weapons_asset,  &character_asset, &collision_settings, matches!(player, PlayerType::Local), i);
     }
 
     // move the channel out of the socket (required because GGRS takes ownership of it)

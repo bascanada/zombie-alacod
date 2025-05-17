@@ -5,7 +5,7 @@
     rows: 1,
 
     animated: true,
-    name: "bod",
+    name: "body",
 
     scale: 1.0,
 

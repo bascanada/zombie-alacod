@@ -4,4 +4,38 @@
         max_speed: 400.0,
         friction: 100.0
     ),
+
+    asset_name_ref: "player",
+
+    collider: (
+        shape: Rectangle(
+            width: 60.,
+            height: 120.,
+        ),
+        offset: ( 0.0, -20.0 )
+    ),
+
+    scale: 6.0,
+
+
+    starting_skin: "1",
+
+    skins: {
+        "1": (
+            layers: {
+                "shadow": "",
+                "body": "",
+                "shirt": ""
+            }
+        ),
+        "2": (
+            layers: {
+                "shadow": "",
+                "body": "",
+                "shirt": "",
+                "hair": ""
+            }
+        )
+
+    }
 )

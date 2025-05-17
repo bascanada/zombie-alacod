@@ -40,10 +40,12 @@ impl GlobalAsset {
                     "body" => asset_server.load("ZombieShooter/Sprites/Character/machine_gun_sheet.ron")
                 ),
                 "zombie_1" => bmap!(
-                    "bod" => asset_server.load("ZombieShooter/Sprites/Zombie/zombie_sheet.ron")
+                    "body" => asset_server.load("ZombieShooter/Sprites/Zombie/zombie_sheet.ron"),
+                    "shadow" => asset_server.load("ZombieShooter/Sprites/Character/shadow_sheet.ron")
                 ),
                 "zombie_2" => bmap!(
-                    "body" => asset_server.load("ZombieShooter/Sprites/Zombie/zombie_hard_sheet.ron")
+                    "body" => asset_server.load("ZombieShooter/Sprites/Zombie/zombie_hard_sheet.ron"),
+                    "shadow" => asset_server.load("ZombieShooter/Sprites/Character/shadow_sheet.ron")
                 )
             ),
             animations: bmap!(

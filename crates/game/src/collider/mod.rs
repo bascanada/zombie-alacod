@@ -8,6 +8,20 @@ pub enum ColliderShape {
     Rectangle { width: f32, height: f32 },
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ColliderConfig {
+    pub shape: ColliderShape,
+    pub offset: (f32, f32), // Offset from entity transform
+}
+
+impl Into<Collider> for &ColliderConfig {
+    fn into(self) -> Collider {
+        Collider { shape: self.shape.clone(), offset: Vec2::new(self.offset.0, self.offset.1)}
+    } 
+}
+
+
+
 #[derive(Component, Clone, Debug, Serialize, Deserialize)]
 pub struct Collider {
     pub shape: ColliderShape,
