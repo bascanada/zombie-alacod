@@ -43,7 +43,6 @@ pub fn create_character(
         Velocity(Vec2::ZERO),
         collider,
         health,
-        DamageAccumulator::default(),
         collision_layer,
         CharacterConfigHandles {
             config: player_config_handle.clone(),

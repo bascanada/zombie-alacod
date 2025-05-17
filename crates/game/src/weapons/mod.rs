@@ -712,7 +712,13 @@ fn apply_bullet_dommage(
         // Update existing accumulator
         accumulator.total_damage += bullet.damage;
         accumulator.hit_count += 1;
-        println!("applying dmg {}", accumulator.total_damage);
+        accumulator.last_hit_by = Some(health::HitBy::Player(bullet.player_handle))
+    } else {
+        commands.entity(target_entity).insert(DamageAccumulator{
+            hit_count: 1,
+            total_damage: bullet.damage,
+            last_hit_by: Some(health::HitBy::Player(bullet.player_handle)),
+        });
     }
 }
 

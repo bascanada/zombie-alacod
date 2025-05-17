@@ -49,17 +49,15 @@ impl From<HealthConfig> for Health {
 
 pub fn rollback_apply_accumulated_damage(
     mut commands: Commands,
-    mut query: Query<(Entity, &mut DamageAccumulator, &mut Health), With<Rollback>>,
+    mut query: Query<(Entity, &DamageAccumulator, &mut Health), With<Rollback>>,
 ) {
-    for (entity, mut accumulator, mut health) in query.iter_mut() {
+    for (entity, accumulator, mut health) in query.iter_mut() {
 
         if accumulator.total_damage > 0. {
 
             health.current -= accumulator.total_damage;
-            
-            accumulator.total_damage = 0.;
-            accumulator.hit_count = 0;
-            accumulator.last_hit_by = None;
+
+            commands.entity(entity).remove::<DamageAccumulator>();
 
             if health.current <= 0. {
                 commands.entity(entity).insert(Death{ last_hit_by: accumulator.last_hit_by.clone( )});
@@ -76,7 +74,7 @@ pub fn rollback_apply_death(
 ) {
     for (entity, death) in query.iter_mut() {
         info!("Entity {} killed by {:?}", entity, death.last_hit_by);
-        commands.entity(entity).despawn_recursive();
+        commands.entity(entity).try_despawn_recursive();
     }
 }
 
