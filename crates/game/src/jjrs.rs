@@ -57,9 +57,6 @@ pub fn setup_ggrs_local(
         create_player(&mut commands, &global_assets, &weapons_asset,  &character_asset, &collision_settings, local, i);
     }
 
-    
-    spawn_enemy("zombie_1".to_string(), Vec3::new(-300.0, 250.0, 0.0), &mut commands, &weapons_asset, &character_asset, &global_assets, &collision_settings);
-
     spawn_test_wall(
         &mut commands,
         Vec3::new(500.0, 250.0, 0.0),
@@ -155,8 +152,6 @@ pub fn wait_for_players(
         
         create_player(&mut commands, &global_assets, &weapons_asset,  &character_asset, &collision_settings, matches!(player, PlayerType::Local), i);
     }
-
-    spawn_enemy("zombie_1".to_string(), Vec3::new(-300.0, 250.0, 0.0), &mut commands, &weapons_asset, &character_asset, &global_assets, &collision_settings);
 
     spawn_test_wall(
         &mut commands,

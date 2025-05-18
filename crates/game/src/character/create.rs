@@ -50,5 +50,18 @@ pub fn create_character(
         animation_bundle,
     ));
 
+    let entity = entity.with_children(|parent| {
+        parent.spawn((
+            HealthBar,
+            Sprite {
+                color: (LinearRgba::GREEN).into(),
+                custom_size: Some(Vec2::new(30.0, 3.0)),
+                ..default()
+            },
+            Transform::from_translation(Vec3::new(0.0, 10.0, 0.1)),
+        )).add_rollback();
+    });
+
+
     entity.add_rollback().id()
 }

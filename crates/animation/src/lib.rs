@@ -78,7 +78,7 @@ pub struct LoadingAsset {
     pub remove: Vec<String>,
 }
 
-#[derive(Component)]
+#[derive(Component, Default, Clone, Debug)]
 pub struct LayerName {
     pub name: String
 }
@@ -324,6 +324,7 @@ fn character_visuals_update_system(
 }
 
 
+
 // SYSTEM THAT RUN ON THE BEVY SCHEDULE FOR SYNCH
 
 pub fn character_visuals_spawn_system(
@@ -407,7 +408,7 @@ pub fn character_visuals_spawn_system(
 
                         let sprite = entity_commands.id();
 
-                        commands.entity(entity).add_child(sprite);
+                        commands.entity(entity).add_rollback().add_child(sprite);
 
                         // Add to active layers with empty string value (or you could store meaningful metadata here)
                         active_layers.layers.insert(spritesheet_config.name.clone(), String::new());
@@ -606,6 +607,7 @@ impl Plugin for D2AnimationPlugin {
         
         app
             .rollback_component_with_reflect::<AnimationState>()
+            .rollback_component_with_clone::<LayerName>()
             .rollback_component_with_clone::<ActiveLayers>();
 
         app.add_systems(

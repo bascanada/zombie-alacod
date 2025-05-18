@@ -1,28 +1,117 @@
 // crates/game/src/enemy/config.rs
-use bevy::prelude::*;
-use serde::Deserialize;
-use std::ops::Range;
+use bevy::{prelude::*, utils::HashSet};
+use utils::rng::RollbackRng;
 
-#[derive(Asset, TypePath, Deserialize, Debug, Clone)]
-pub struct BasicEnemySpawnConfig {
-    pub timeout_range: Range<f32>,  // Range of seconds between spawns
-    pub max_enemies: u32,           // Maximum number of enemies alive at once
-    pub spawn_radius: f32,          // Radius around players where zombies can spawn
-    pub min_player_distance: f32,   // Minimum distance from any player
+use crate::{character::{config::CharacterConfig, player::Player}, collider::{Collider, CollisionSettings}, frame::FrameCount, global_asset::GlobalAsset, weapons::WeaponsConfig};
+
+use super::{create::spawn_enemy, spawning_basic::{BasicEnemySpawnConfig, BasicEnemySpawnSystem}, Enemy};
+
+#[derive(Resource, Default, Debug, Reflect, Clone)]
+#[reflect]
+pub struct EnemySpawnState {
+    pub next_spawn_frame: u32,
+
+    
+    #[reflect(ignore)]
+    pub last_spawn_frame: u32,
+    #[reflect(ignore)]
+    pub spawned_frames: HashSet<u32>,
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
-pub enum EnemySpawnSystemType {
-    BasicSpawnSystem,  // Spawn in circle encompassing all players
+impl std::hash::Hash for EnemySpawnState {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.next_spawn_frame.hash(state);
+    }
 }
 
-impl Default for BasicEnemySpawnConfig {
+
+
+
+
+// Trait for different spawn systems
+pub trait EnemySpawnSystem: Send + Sync + 'static {
+    fn should_spawn(&self, frame: &FrameCount, state: &EnemySpawnState, current_enemies: u32) -> bool;
+    fn calculate_next_spawn_frame(&self, frame: &FrameCount, rng: &mut RollbackRng) -> u32;
+    fn calculate_spawn_position(
+        &self,
+        rng: &mut RollbackRng,
+        player_positions: &[Vec2],
+        enemy_query: &Query<(Entity, &Transform, &Collider), With<Enemy>>,
+    ) -> Option<Vec2>;
+}
+
+
+#[derive(Resource)]
+pub struct EnemySpawnSystemHolder {
+    pub system: Box<dyn EnemySpawnSystem>,
+}
+
+impl Default for EnemySpawnSystemHolder {
     fn default() -> Self {
-        Self {
-            timeout_range: 1.0..3.0,
-            max_enemies: 10,
-            spawn_radius: 500.0,
-            min_player_distance: 100.0,
-        }
+        Self { system: Box::new(BasicEnemySpawnSystem::new(BasicEnemySpawnConfig::default())) }
+    } 
+}
+
+
+
+pub fn enemy_spawn_system(
+    mut commands: Commands,
+    frame: Res<FrameCount>,
+    mut spawn_state: ResMut<EnemySpawnState>,
+    mut rng: ResMut<RollbackRng>,
+    spawn_system_holder: Res<EnemySpawnSystemHolder>,
+    player_query: Query<(&Transform, &Player)>,
+    zombie_query: Query<(Entity, &Transform, &Collider), With<Enemy>>,
+    collision_settings: Res<CollisionSettings>,
+
+    weapons_asset: Res<Assets<WeaponsConfig>>,
+    characters_asset: Res<Assets<CharacterConfig>>,
+
+    global_assets: Res<GlobalAsset>,
+) {
+    println!("current frame {} : last spawn frame {} : next spawn at {}", frame.frame, spawn_state.last_spawn_frame, spawn_state.next_spawn_frame);
+
+    //if spawn_state.spawned_frames.contains(&frame.frame) || frame.frame <= spawn_state.last_spawn_frame {
+    //    return;
+    //}
+
+    let spawn_system = &spawn_system_holder.system;
+    
+    // Count current zombies
+    let current_zombies = zombie_query.iter().count() as u32;
+    
+    // Check if we should spawn more zombies
+    if !spawn_system.should_spawn(&frame, &spawn_state, current_zombies) {
+        return;
+    }
+    
+    // Calculate next spawn frame
+    spawn_state.next_spawn_frame = spawn_system.calculate_next_spawn_frame(&frame, &mut rng);
+    //spawn_state.last_spawn_frame = frame.frame;
+    //spawn_state.spawned_frames.insert(frame.frame);
+    
+    // Collect all player positions
+    let player_positions: Vec<Vec2> = player_query
+        .iter()
+        .map(|(transform, _)| transform.translation.truncate())
+        .collect();
+    
+    // Calculate spawn position
+    if let Some(spawn_pos) = spawn_system.calculate_spawn_position(&mut rng, &player_positions, &zombie_query) {
+        spawn_enemy("zombie_1".into(), spawn_pos.extend(0.0), &mut commands, &weapons_asset, &characters_asset, &global_assets, &collision_settings);
+    }
+}
+
+
+pub fn cleanup_spawned_frames(
+    frame: Res<FrameCount>,
+    mut spawn_state: ResMut<EnemySpawnState>,
+) {
+    // Keep only the last 120 frames (2 seconds @ 60 FPS) to avoid unbounded growth
+    const FRAMES_TO_KEEP: u32 = 120;
+    
+    if frame.frame > FRAMES_TO_KEEP {
+        let oldest_frame_to_keep = frame.frame - FRAMES_TO_KEEP;
+        spawn_state.spawned_frames.retain(|&f| f >= oldest_frame_to_keep);
     }
 }

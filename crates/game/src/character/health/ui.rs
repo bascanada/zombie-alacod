@@ -8,6 +8,7 @@ use super::Health;
 #[derive(Component)]
 pub struct HealthBar;
 
+/*
 pub fn setup_health_bars(
     mut commands: Commands,
     query: Query<(Entity, Option<&Enemy>), Added<Health>>,
@@ -27,6 +28,7 @@ pub fn setup_health_bars(
         });
     }
 }
+*/
 
 pub fn update_health_bars(
     health_query: Query<(&Health, &Children)>,

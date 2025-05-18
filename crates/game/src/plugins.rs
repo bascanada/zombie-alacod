@@ -8,7 +8,7 @@ use bevy_common_assets::ron::RonAssetPlugin;
 use animation::{character_visuals_spawn_system, set_sprite_flip, D2AnimationPlugin};
 use bevy_ggrs::GgrsPlugin;
 
-use crate::{audio::ZAudioPlugin, camera::CameraControlPlugin, character::{config::CharacterConfig, enemy::Enemy, health::{rollback_apply_accumulated_damage, rollback_apply_death, ui::{setup_health_bars, update_health_bars}, DamageAccumulator, Death, Health}, movement::Velocity, player::{control::PlayerAction, input::{apply_friction, apply_inputs, move_characters, read_local_inputs, update_animation_state, PointerWorldPosition}, jjrs::PeerConfig, Player}}, collider::{Collider, CollisionLayer, CollisionSettings, Wall}, debug::SpriteDebugOverlayPlugin, frame::{increase_frame_system, FrameCount}, global_asset::{add_global_asset, loading_asset_system}, jjrs::{log_ggrs_events, setup_ggrs_local, start_matchbox_socket, wait_for_players, GggrsSessionConfiguration}, weapons::{bullet_rollback_collision_system, bullet_rollback_system, system_weapon_position, ui::WeaponDebugUIPlugin, weapon_inventory_system, weapon_rollback_system, weapons_config_update_system, Bullet, BulletRollbackState, WeaponInventory, WeaponModesState, WeaponState, WeaponsConfig}};
+use crate::{audio::ZAudioPlugin, camera::CameraControlPlugin, character::{config::CharacterConfig, enemy::{spawning::{cleanup_spawned_frames, enemy_spawn_system, EnemySpawnState, EnemySpawnSystemHolder}, Enemy}, health::{rollback_apply_accumulated_damage, rollback_apply_death, ui::{update_health_bars}, DamageAccumulator, Death, Health}, movement::Velocity, player::{control::PlayerAction, input::{apply_friction, apply_inputs, move_characters, read_local_inputs, update_animation_state, PointerWorldPosition}, jjrs::PeerConfig, Player}}, collider::{Collider, CollisionLayer, CollisionSettings, Wall}, debug::SpriteDebugOverlayPlugin, frame::{increase_frame_system, FrameCount}, global_asset::{add_global_asset, loading_asset_system}, jjrs::{log_ggrs_events, setup_ggrs_local, start_matchbox_socket, wait_for_players, GggrsSessionConfiguration}, weapons::{bullet_rollback_collision_system, bullet_rollback_system, system_weapon_position, ui::WeaponDebugUIPlugin, weapon_inventory_system, weapon_rollback_system, weapons_config_update_system, Bullet, BulletRollbackState, WeaponInventory, WeaponModesState, WeaponState, WeaponsConfig}};
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Hash, States)]
 pub enum AppState {
@@ -62,8 +62,13 @@ impl Plugin for BaseZombieGamePlugin {
         app.init_state::<AppState>();
 
 
+        app.init_resource::<EnemySpawnSystemHolder>();
+        app.init_resource::<EnemySpawnState>();
+
+
         app.set_rollback_schedule_fps(60);
         app.add_plugins(GgrsPlugin::<PeerConfig>::default())
+            .rollback_resource_with_reflect::<EnemySpawnState>()
             .rollback_resource_with_copy::<PointerWorldPosition>()
             .rollback_resource_with_copy::<FrameCount>()
             .rollback_component_with_reflect::<Health>()
@@ -115,15 +120,21 @@ impl Plugin for BaseZombieGamePlugin {
                 character_visuals_spawn_system.after(bullet_rollback_collision_system),
                 set_sprite_flip.after(character_visuals_spawn_system),
                 update_animation_state.after(set_sprite_flip),
+                // Spawning of enemy
+
+                enemy_spawn_system.after(update_animation_state),
+                
                 // After each frame
-                increase_frame_system.after(update_animation_state)
+                increase_frame_system.after(enemy_spawn_system)
             ));
         app.add_systems(Update, (
             weapon_inventory_system,
             weapons_config_update_system,
 
-            setup_health_bars,
-            update_health_bars
+            //setup_health_bars,
+            update_health_bars,
+
+            cleanup_spawned_frames.run_if(in_state(AppState::InGame))
         ));
     }
 }
