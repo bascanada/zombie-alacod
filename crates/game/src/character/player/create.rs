@@ -5,7 +5,7 @@ use leafwing_input_manager::{prelude::ActionState, InputManagerBundle};
 use utils::bmap;
 use bevy_kira_audio::prelude::*;
 
-use crate::{character::movement::Velocity, collider::{Collider, ColliderShape, CollisionLayer, CollisionSettings}, global_asset::GlobalAsset, weapons::{spawn_weapon_for_player, FiringMode, Weapon, WeaponInventory, WeaponsConfig}};
+use crate::{character::movement::{SprintState, Velocity}, collider::{Collider, ColliderShape, CollisionLayer, CollisionSettings}, global_asset::GlobalAsset, weapons::{spawn_weapon_for_player, FiringMode, Weapon, WeaponInventory, WeaponsConfig}};
 
 use bevy_ggrs::AddRollbackCommandExtension;
 use super::{config::{PlayerConfig, PlayerConfigHandles}, control::{get_input_map, PlayerAction}, input::CursorPosition, LocalPlayer, Player};
@@ -56,7 +56,7 @@ pub fn create_player(
             shape: ColliderShape::Rectangle { width: 60., height: 120. },
         },
         if local {  CollisionLayer(collision_settings.player_layer) } else { CollisionLayer(collision_settings.enemy_layer) },
-
+        SprintState::default(),
         PlayerConfigHandles {
             config: player_config_handle.clone(),
         },

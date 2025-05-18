@@ -8,9 +8,10 @@ use bevy_ggrs::prelude::*;
 use bevy_ggrs::LocalInputs;
 use serde::{Serialize, Deserialize}; 
 
-use crate::character::movement::{MovementConfig, Velocity};
+use crate::character::movement::{MovementConfig, SprintState, Velocity};
 use crate::character::player::{control::PlayerAction, Player};
 use crate::collider::{is_colliding, Collider, CollisionLayer, CollisionSettings, Wall};
+use crate::weapons::WeaponInventory;
 
 use super::config::PlayerConfig;
 use super::config::PlayerConfigHandles;
@@ -23,7 +24,8 @@ const INPUT_DOWN: u16 = 1 << 1;
 const INPUT_LEFT: u16 = 1 << 2;
 const INPUT_RIGHT: u16 = 1 << 3;
 pub const INPUT_RELOAD: u16 = 1 << 4;
-pub const INPUT_SWITCH_WEAPON_MODE: u16 = 1 << 4;
+pub const INPUT_SWITCH_WEAPON_MODE: u16 = 1 << 5;
+pub const INPUT_SPRINT: u16 = 1 << 5;
 
 const PAN_FACING_THRESHOLD: i16 = 5;
 
@@ -107,6 +109,9 @@ pub fn read_local_inputs(
             input.buttons |= INPUT_RELOAD;
          }
 
+         if action_state.pressed(&PlayerAction::Sprint) {
+            input.buttons |= INPUT_SPRINT;
+         }
 
 
         if let Ok(window) = q_window.get_single() {
@@ -134,16 +139,27 @@ pub fn apply_inputs(
     inputs: Res<PlayerInputs<PeerConfig>>,
     player_configs: Res<Assets<PlayerConfig>>,
 
-    mut query: Query<(Entity, &mut Velocity, &mut ActiveLayers, &mut FacingDirection, &mut CursorPosition, &PlayerConfigHandles, &Player), With<Rollback>>,
+    mut query: Query<(Entity, &WeaponInventory, &mut Velocity, &mut ActiveLayers, &mut FacingDirection, &mut CursorPosition, &mut SprintState, &PlayerConfigHandles, &Player), With<Rollback>>,
 
 
     time: Res<Time>,
 ) {
 
-    for (entity, mut velocity, mut active_layers, mut facing_direction , mut cursor_position, config_handles, player) in query.iter_mut() {
+    for (entity, inventory, mut velocity, mut active_layers, mut facing_direction , mut cursor_position, mut sprint_state, config_handles, player) in query.iter_mut() {
         if let Some(config) = player_configs.get(&config_handles.config) {
             let (input, _input_status) = inputs[player.handle];
 
+            let is_sprinting = input.buttons & INPUT_SPRINT != 0;
+            sprint_state.is_sprinting = is_sprinting;
+            
+            // Gradually adjust sprint factor
+            if !inventory.is_reloading() && is_sprinting {
+                sprint_state.sprint_factor += config.movement.sprint_acceleration_per_frame;
+                sprint_state.sprint_factor = sprint_state.sprint_factor.min(1.0);
+            } else {
+                sprint_state.sprint_factor -= config.movement.sprint_deceleration_per_frame;
+                sprint_state.sprint_factor = sprint_state.sprint_factor.max(0.0);
+            } 
 
             let mut direction = Vec2::ZERO;
             if input.buttons & INPUT_UP != 0    { direction.y += 1.0; }
@@ -158,9 +174,12 @@ pub fn apply_inputs(
 
 
             if direction != Vec2::ZERO {
-                let move_delta = direction.normalize() * config.movement.acceleration * time.delta().as_secs_f32();
+                let sprint_multiplier = 1.0 + (config.movement.sprint_multiplier - 1.0) * sprint_state.sprint_factor;
+                let move_delta = direction.normalize() * config.movement.acceleration * sprint_multiplier * time.delta().as_secs_f32();
                 velocity.0 += move_delta;
-                velocity.0 = velocity.0.clamp_length_max(config.movement.max_speed);
+                
+                let max_speed = config.movement.max_speed * sprint_multiplier;
+                velocity.0 = velocity.0.clamp_length_max(max_speed);
             }
         }
     }
