@@ -70,14 +70,6 @@ pub struct AnimationMapConfig {
 }
 
 // COMPONENT
-
-#[derive(Component, Reflect, Default, Clone, Debug, PartialEq, Eq)]
-#[reflect(Component, PartialEq)] // Reflect needed for GGRS state hashing
-pub struct LoadingAsset {
-    pub layers: HashMap<String, String>,
-    pub remove: Vec<String>,
-}
-
 #[derive(Component, Default, Clone, Debug)]
 pub struct LayerName {
     pub name: String
@@ -141,7 +133,6 @@ pub struct AnimationBundle {
     handles: CharacterAnimationHandles,
     timer: AnimationTimer,
     active_layers: ActiveLayers,
-    loading_asset: LoadingAsset,
     facing_direction: FacingDirection,
 }
 
@@ -164,12 +155,8 @@ impl AnimationBundle {
                 animations,
                 starting_index,
             },
-            loading_asset: LoadingAsset {
-                layers: starting_layers,
-                remove: vec![],
-            },
             active_layers: ActiveLayers {
-                layers: HashMap::new(),
+                layers: starting_layers,
             },
             facing_direction: FacingDirection::default()
         }
@@ -190,7 +177,7 @@ fn animate_sprite_system(
         &CharacterAnimationHandles,
         &mut AnimationTimer,
         &AnimationState,
-    ), Without<LoadingAsset>>,
+    )>,
     mut query_sprites: Query<(&mut Sprite, &LayerName), With<AnimatedLayer>>,
     
 ) {
@@ -333,7 +320,7 @@ pub fn character_visuals_spawn_system(
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     spritesheet_configs: Res<Assets<SpriteSheetConfig>>,
     animation_configs: Res<Assets<AnimationMapConfig>>,
-    mut query: Query<(Entity, &CharacterAnimationHandles, &mut ActiveLayers, &mut LoadingAsset, &AnimationState), With<Rollback>>,
+    mut query: Query<(Entity, &CharacterAnimationHandles, &mut ActiveLayers, &AnimationState), With<Rollback>>,
     child_query: Query<&Children>,
     sprite_query: Query<(Entity, &LayerName, &Sprite)>,
 ) {
@@ -480,120 +467,53 @@ pub fn set_sprite_flip(
     }
 }
 
-/// Toggles the specified layers on or off for the given entity.
-/// If a layer is currently active, it will be removed.
-/// If a layer is not active, it will be added.
-pub fn toggle_layer(
-    parent_entity: Entity,
+pub fn create_child_sprite(
     commands: &mut Commands,
-    active_layers: &mut ActiveLayers,
-    layers: Vec<String>,
-) {
-    let mut to_remove = vec![];
-    let mut to_insert = HashMap::new();
+    asset_server: &Res<AssetServer>,
+    texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
 
-    for layer in layers.iter() {
-        if active_layers.layers.contains_key(layer) {
-            to_remove.push(layer.clone());
-        } else {
-            to_insert.insert(layer.clone(), String::new());
-        }
-    }
-
-    // Only proceed if there are actual changes to make
-    if !to_remove.is_empty() || !to_insert.is_empty() {
-        info!(
-            "Layer toggle operation: adding {:?}, removing {:?}",
-            to_insert.keys().collect::<Vec<_>>(),
-            to_remove
-        );
-        
-        commands.entity(parent_entity).insert(LoadingAsset {
-            layers: to_insert,
-            remove: to_remove,
-        });
-    }
-}
-
-/// Adds the specified layers to the entity if they aren't already active
-pub fn add_layers(
     parent_entity: Entity,
-    commands: &mut Commands,
-    active_layers: &ActiveLayers,
-    layers: Vec<String>,
-) {
-    let mut to_insert = HashMap::new();
+    spritesheet_config: &SpriteSheetConfig,
+    current_frame_index: usize
+) -> Entity {
+    let texture_handle: Handle<Image> = asset_server.load(&spritesheet_config.path);
+    let layout = TextureAtlasLayout::from_grid(
+        UVec2::new(
+            spritesheet_config.tile_size.0,
+            spritesheet_config.tile_size.1,
+        ),
+        spritesheet_config.columns,
+        spritesheet_config.rows,
+        None,
+        None,
+    );
+    let layout_handle = texture_atlas_layouts.add(layout);
 
-    for layer in layers.iter() {
-        if !active_layers.layers.contains_key(layer) {
-            to_insert.insert(layer.clone(), String::new());
-        }
+    let mut entity_commands = commands.spawn((
+        Sprite {
+            image: texture_handle.clone(),
+            texture_atlas: Some(TextureAtlas {
+                layout: layout_handle.clone(),
+                index: current_frame_index,
+            }),
+            anchor: spritesheet_config.anchor.to_anchor(),
+            ..default()
+        },
+        Transform::from_scale(Vec3::splat(spritesheet_config.scale))
+            .with_translation(Vec3::new(spritesheet_config.offset_x, spritesheet_config.offset_y, spritesheet_config.offset_z)),
+            //.with_rotation(Quat::IDENTITY),
+        LayerName { name: spritesheet_config.name.clone() },
+    ));
+
+    if spritesheet_config.animated {
+        entity_commands.insert(AnimatedLayer{});
     }
 
-    if !to_insert.is_empty() {
-        info!("Adding layers: {:?}", to_insert.keys().collect::<Vec<_>>());
-        commands.entity(parent_entity).insert(LoadingAsset {
-            layers: to_insert,
-            remove: vec![],
-        });
-    }
-}
+    let sprite = entity_commands.id();
 
-/// Removes the specified layers from the entity if they are active
-pub fn remove_layers(
-    parent_entity: Entity,
-    commands: &mut Commands,
-    active_layers: &ActiveLayers,
-    layers: Vec<String>,
-) {
-    let mut to_remove = vec![];
+    commands.entity(parent_entity).add_rollback().add_child(sprite);
 
-    for layer in layers.iter() {
-        if active_layers.layers.contains_key(layer) {
-            to_remove.push(layer.clone());
-        }
-    }
-
-    if !to_remove.is_empty() {
-        info!("Removing layers: {:?}", to_remove);
-        commands.entity(parent_entity).insert(LoadingAsset {
-            layers: HashMap::new(),
-            remove: to_remove,
-        });
-    }
-}
-
-/// Replaces one layer with another
-pub fn replace_layer(
-    parent_entity: Entity,
-    commands: &mut Commands,
-    active_layers: &ActiveLayers,
-    old_layer: String,
-    new_layer: String,
-) {
-    let mut to_remove = vec![];
-    let mut to_insert = HashMap::new();
-
-    if active_layers.layers.contains_key(&old_layer) {
-        to_remove.push(old_layer);
-    }
-    
-    if !active_layers.layers.contains_key(&new_layer) {
-        to_insert.insert(new_layer, String::new());
-    }
-
-    if !to_remove.is_empty() || !to_insert.is_empty() {
-        info!(
-            "Replacing layer: {:?} with {:?}",
-            to_remove,
-            to_insert.keys().collect::<Vec<_>>()
-        );
-        
-        commands.entity(parent_entity).insert(LoadingAsset {
-            layers: to_insert,
-            remove: to_remove,
-        });
-    }
+    sprite
 }
 
 // PLUGIN
