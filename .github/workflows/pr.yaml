@@ -38,6 +38,6 @@ jobs:
       - name: Style Check
         run: make format
       - name: Build web
-        run: make build_website TARGET=web PROFILE=prod
+        run:  make build_docker_website TARGET=web
       - name: Build matchbox
         run: make build_docker_matchbox_server 
