@@ -1,13 +1,13 @@
 pub mod ui;
 
-use animation::{AnimationBundle, FacingDirection};
+use animation::{create_child_sprite, AnimationBundle, FacingDirection, SpriteSheetConfig};
 use bevy::{math::VectorSpace, prelude::*, utils::{HashMap, HashSet}};
 use bevy_ggrs::{AddRollbackCommandExtension, PlayerInputs, Rollback};
 use ggrs::PlayerHandle;
 use serde::{Deserialize, Serialize};
 use utils::{bmap, rng::RollbackRng};
 
-use crate::{character::{dash::DashState, movement::SprintState, player::{input::{CursorPosition, INPUT_DASH, INPUT_RELOAD, INPUT_SPRINT, INPUT_SWITCH_WEAPON_MODE}, jjrs::PeerConfig, Player}}, collider::{is_colliding, Collider, ColliderShape, CollisionLayer, CollisionSettings, Wall}, frame::FrameCount, global_asset::GlobalAsset};
+use crate::{character::{dash::DashState, health::{self, DamageAccumulator, Health}, movement::SprintState, player::{input::{CursorPosition, INPUT_DASH, INPUT_RELOAD, INPUT_SPRINT, INPUT_SWITCH_WEAPON_MODE}, jjrs::PeerConfig, Player}}, collider::{is_colliding, Collider, ColliderShape, CollisionLayer, CollisionSettings, Wall}, frame::FrameCount, global_asset::GlobalAsset};
 
 // ROOLBACL
 
@@ -300,6 +300,10 @@ pub fn spawn_weapon_for_player(
     commands: &mut Commands,
     global_assets: &Res<GlobalAsset>,
 
+    asset_server: &Res<AssetServer>,
+    texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
+    sprint_sheet_assets: &Res<Assets<SpriteSheetConfig>>,
+
     active: bool,
 
     player_entity: Entity,
@@ -311,7 +315,7 @@ pub fn spawn_weapon_for_player(
     let animation_handle = global_assets.animations.get(&weapon.sprite_config.name).unwrap().clone();
 
     let animation_bundle =
-        AnimationBundle::new(map_layers, animation_handle.clone(), weapon.sprite_config.index, bmap!("body" => String::new()));
+        AnimationBundle::new(map_layers.clone(), animation_handle.clone(), weapon.sprite_config.index, bmap!("body" => String::new()));
 
     let mut weapon_state = WeaponState::default();
     let mut weapon_modes_state = WeaponModesState::default();
@@ -341,6 +345,14 @@ pub fn spawn_weapon_for_player(
         weapon.clone(),
         animation_bundle
     )).add_rollback().id();
+
+
+    let spritesheet_config = sprint_sheet_assets.get(map_layers.get("body").unwrap()).unwrap();
+    create_child_sprite(
+        commands,
+        &asset_server,
+        texture_atlas_layouts,
+        entity.clone(), &spritesheet_config, 0);
 
     inventory.weapons.push((entity.clone(), weapon));
 
@@ -707,12 +719,34 @@ pub fn bullet_rollback_system(
     }
 }
 
+
+fn apply_bullet_dommage(
+    commands: &mut Commands,
+    target_entity: Entity,
+    bullet: &Bullet,
+    
+    mut opt_dmg_accumulator: Option<Mut<'_, DamageAccumulator, >>
+) {
+    if let Some(accumulator) = opt_dmg_accumulator.as_mut() {
+        // Update existing accumulator
+        accumulator.total_damage += bullet.damage;
+        accumulator.hit_count += 1;
+        accumulator.last_hit_by = Some(health::HitBy::Player(bullet.player_handle))
+    } else {
+        commands.entity(target_entity).insert(DamageAccumulator{
+            hit_count: 1,
+            total_damage: bullet.damage,
+            last_hit_by: Some(health::HitBy::Player(bullet.player_handle)),
+        });
+    }
+}
+
 // Collision detection system (inside rollback)
 pub fn bullet_rollback_collision_system(
     mut commands: Commands,
     settings: Res<CollisionSettings>,
-    bullet_query: Query<(Entity, &Transform, &Bullet, &Collider, &CollisionLayer)>,
-    collider_query: Query<(Entity, &Transform, &Collider, &CollisionLayer, Option<&Wall>), Without<Bullet>>,
+    bullet_query: Query<(Entity, &Transform, &Bullet, &Collider, &CollisionLayer), With<Rollback>>,
+    mut collider_query: Query<(Entity, &Transform, &Collider, &CollisionLayer, Option<&Wall>, Option<&Health>, Option<&mut DamageAccumulator>), (Without<Bullet>, With<Rollback>)>,
 ) {
     // Track bullets to despawn after processing
     let mut bullets_to_despawn = HashSet::new();
@@ -723,7 +757,7 @@ pub fn bullet_rollback_collision_system(
             continue;
         }
         
-        for (target_entity, target_transform, target_collider, target_layer, opt_wall) in collider_query.iter() {
+        for (target_entity, target_transform, target_collider, target_layer, opt_wall, opt_health, opt_accumulator) in collider_query.iter_mut() {
             // Check if these layers should collide
             if !settings.layer_matrix[bullet_layer.0 as usize][target_layer.0 as usize] {
                 continue;
@@ -731,24 +765,18 @@ pub fn bullet_rollback_collision_system(
             
             // Check for collision using our new helper function
             if is_colliding(bullet_transform, bullet_collider, target_transform, target_collider) { 
-                // Handle collision based on bullet type
+                if opt_health.is_some() {
+                    apply_bullet_dommage(&mut commands, target_entity, bullet, opt_accumulator);
+                }
+
                 match bullet.bullet_type {
                     BulletType::Standard { .. } => {
-                        // Mark target as hit
-                        commands.entity(target_entity).insert(HitMarker {
-                            target: bullet_entity,
-                            damage: bullet.damage,
-                        });
-                        
+                       
                         // Standard bullets are destroyed on impact
                         bullets_to_despawn.insert(bullet_entity);
                         break;
                     },
                     BulletType::Explosive { blast_radius, .. } => {
-                        commands.entity(target_entity).insert(HitMarker {
-                            target: bullet_entity,
-                            damage: bullet.damage,
-                        });
  
                         // Add explosion marker to bullet entity
                         /*
@@ -766,10 +794,6 @@ pub fn bullet_rollback_collision_system(
                     },
                     BulletType::Piercing { .. } => {
                         // Mark target as hit
-                        commands.entity(target_entity).insert(HitMarker {
-                            target: bullet_entity,
-                            damage: bullet.damage,
-                        });
 
                         if opt_wall.is_some() {
                             bullets_to_despawn.insert(bullet_entity);

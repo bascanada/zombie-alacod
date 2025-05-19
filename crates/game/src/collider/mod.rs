@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_ggrs::AddRollbackCommandExtension;
 use serde::{Deserialize, Serialize};
 
 
@@ -8,6 +9,20 @@ pub enum ColliderShape {
     Rectangle { width: f32, height: f32 },
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ColliderConfig {
+    pub shape: ColliderShape,
+    pub offset: (f32, f32), // Offset from entity transform
+}
+
+impl Into<Collider> for &ColliderConfig {
+    fn into(self) -> Collider {
+        Collider { shape: self.shape.clone(), offset: Vec2::new(self.offset.0, self.offset.1)}
+    } 
+}
+
+
+
 #[derive(Component, Clone, Debug, Serialize, Deserialize)]
 pub struct Collider {
     pub shape: ColliderShape,
@@ -15,7 +30,7 @@ pub struct Collider {
 }
 
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct Wall;
 
 
@@ -147,16 +162,13 @@ pub fn spawn_test_wall(
     size: Vec2,
     collision_settings: &Res<CollisionSettings>,
     color: Color,
-) -> Entity {
+) {
     commands.spawn((
         Wall,
-        SpriteBundle {
-            transform: Transform::from_translation(position),
-            sprite: Sprite {
-                color,
-                custom_size: Some(size),
-                ..Default::default()
-            },
+        Transform::from_translation(position),
+        Sprite {
+            color,
+            custom_size: Some(size),
             ..Default::default()
         },
         Collider {
@@ -167,5 +179,5 @@ pub fn spawn_test_wall(
             offset: Vec2::ZERO,
         },
         CollisionLayer(collision_settings.wall_layer),
-    )).id()
+    )).add_rollback();
 }

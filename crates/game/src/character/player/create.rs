@@ -1,14 +1,14 @@
 
-use animation::AnimationBundle;
+use animation::{AnimationBundle, SpriteSheetConfig};
 use bevy::{math::VectorSpace, prelude::*, utils:: HashMap};
 use leafwing_input_manager::{prelude::ActionState, InputManagerBundle};
 use utils::bmap;
 use bevy_kira_audio::prelude::*;
 
-use crate::{character::{dash::DashState, movement::{SprintState, Velocity}}, collider::{Collider, ColliderShape, CollisionLayer, CollisionSettings}, global_asset::GlobalAsset, weapons::{spawn_weapon_for_player, FiringMode, Weapon, WeaponInventory, WeaponsConfig}};
+use crate::{character::{config::CharacterConfig, create::create_character, dash::DashState, movement::{SprintState, Velocity}}, collider::{Collider, ColliderShape, CollisionLayer, CollisionSettings}, global_asset::GlobalAsset, weapons::{spawn_weapon_for_player, FiringMode, Weapon, WeaponInventory, WeaponsConfig}};
 
 use bevy_ggrs::AddRollbackCommandExtension;
-use super::{config::{PlayerConfig, PlayerConfigHandles}, control::{get_input_map, PlayerAction}, input::CursorPosition, LocalPlayer, Player};
+use super::{control::{get_input_map, PlayerAction}, input::CursorPosition, LocalPlayer, Player};
 
 const PLAYER_COLORS: &'static [LinearRgba] = &[
     LinearRgba::RED,
@@ -19,77 +19,55 @@ const PLAYER_COLORS: &'static [LinearRgba] = &[
 
 pub fn create_player(
     commands: &mut Commands,
-    weapons_asset: &Res<Assets<WeaponsConfig>>,
     global_assets: &Res<GlobalAsset>,
+    weapons_asset: &Res<Assets<WeaponsConfig>>,
+    character_asset: &Res<Assets<CharacterConfig>>,
     collision_settings: &Res<CollisionSettings>,
+    asset_server: &Res<AssetServer>,
+    texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
+    sprint_sheet_assets: &Res<Assets<SpriteSheetConfig>>,
+
 
     local: bool,
     handle: usize,
 ) {
 
-    let map_layers = global_assets.spritesheets.get("player").unwrap().clone();
-    let animation_handle = global_assets.animations.get("player").unwrap().clone();
-    let player_config_handle = global_assets.player_configs.get("player").unwrap().clone();
 
-    let starting_layer = if handle < 1 {
-        bmap!("shadow" => String::new(), "body" => String::new(), "shirt" => String::new())
-    } else {
-        bmap!("shadow" => String::new(), "body" => String::new(), "hair" => String::new())
-    };
-
-    let animation_bundle =
-        AnimationBundle::new(map_layers, animation_handle.clone(),0, starting_layer);
-
-    let mut entity = commands.spawn((
-        Transform::from_scale(Vec3::splat(6.0)).with_translation(Vec3::new(-50.0 * handle as f32, 0.0, 0.0)),
-        Visibility::default(),
-
-        SpatialAudioEmitter {instances: vec![]},
-        CursorPosition::default(),
-        Player { 
-            handle: handle,
-            color: PLAYER_COLORS[handle].into(),
-        },
-        Velocity(Vec2::ZERO),
-        Collider {
-            offset: Vec2::new(0., -20.),
-            shape: ColliderShape::Rectangle { width: 60., height: 120. },
-        },
-        if local {  CollisionLayer(collision_settings.player_layer) } else { CollisionLayer(collision_settings.enemy_layer) },
-        SprintState::default(),
-        DashState::default(),
-        PlayerConfigHandles {
-            config: player_config_handle.clone(),
-        },
-        animation_bundle,
-    ));
-
+    let entity = create_character(
+        commands, global_assets, character_asset, asset_server, texture_atlas_layouts, sprint_sheet_assets,
+        "player".into(), Some(if handle == 0 { "1" } else { "2" }.into()),
+         (LinearRgba::GREEN).into(),Vec3::new(-50.0 * handle as f32, 0.0, 0.0),
+        CollisionLayer(collision_settings.player_layer),
+    );
     if local {
-        entity.insert(LocalPlayer{});
-        entity.insert(InputManagerBundle::<PlayerAction> {
-            action_state: ActionState::default(),
-            input_map: get_input_map(),
-        });
+        commands.entity(entity)
+            .insert((
+                LocalPlayer{},
+                InputManagerBundle::<PlayerAction> {
+                    action_state: ActionState::default(),
+                    input_map: get_input_map(),
+                }
+            ));
     }
     
-    let entity = entity.add_rollback().id();
-
     let mut inventory = WeaponInventory::default();
-
 
     if let Some(weapons_config) = weapons_asset.get(&global_assets.weapons) {
         let mut keys: Vec<&String> = weapons_config.0.keys().collect();
         keys.sort();
         for (i, k) in keys.iter().enumerate() {
-            spawn_weapon_for_player(commands, global_assets, i == 0, entity, weapons_config.0.get(*k).unwrap().clone(), &mut inventory);
+            spawn_weapon_for_player(commands, global_assets, asset_server, texture_atlas_layouts, sprint_sheet_assets, i == 0, entity, weapons_config.0.get(*k).unwrap().clone(), &mut inventory);
         }
-    } else {
-        println!("NO ASSET FOR WEAPONS");
     }
-
+    
     commands.entity(entity)
         .insert((
             inventory,
+            CursorPosition::default(),
+            Player {
+                handle,
+                color: PLAYER_COLORS[handle].into(),
+            }
         ));
 
 }
