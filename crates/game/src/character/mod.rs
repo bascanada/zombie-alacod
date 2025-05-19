@@ -4,4 +4,5 @@ use serde::Deserialize;
 
 pub mod movement;
 pub mod player;
+pub mod dash;
 

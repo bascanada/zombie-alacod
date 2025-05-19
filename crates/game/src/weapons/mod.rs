@@ -7,7 +7,7 @@ use ggrs::PlayerHandle;
 use serde::{Deserialize, Serialize};
 use utils::{bmap, rng::RollbackRng};
 
-use crate::{character::player::{input::{CursorPosition, INPUT_RELOAD, INPUT_SWITCH_WEAPON_MODE}, jjrs::PeerConfig, Player}, collider::{is_colliding, Collider, ColliderShape, CollisionLayer, CollisionSettings, Wall}, frame::FrameCount, global_asset::GlobalAsset};
+use crate::{character::{dash::DashState, movement::SprintState, player::{input::{CursorPosition, INPUT_DASH, INPUT_RELOAD, INPUT_SPRINT, INPUT_SWITCH_WEAPON_MODE}, jjrs::PeerConfig, Player}}, collider::{is_colliding, Collider, ColliderShape, CollisionLayer, CollisionSettings, Wall}, frame::FrameCount, global_asset::GlobalAsset};
 
 // ROOLBACL
 
@@ -478,7 +478,7 @@ pub fn weapon_rollback_system(
     inputs: Res<PlayerInputs<PeerConfig>>,
     frame: Res<FrameCount>,
 
-    mut inventory_query: Query<(Entity, &mut WeaponInventory, &CollisionLayer, &Player)>,
+    mut inventory_query: Query<(Entity, &mut WeaponInventory, &SprintState, &DashState, &CollisionLayer, &Player)>,
     mut weapon_query: Query<(&mut Weapon, &mut WeaponState, &mut WeaponModesState, &GlobalTransform, &Parent)>,
 
     player_query: Query<(&GlobalTransform, &FacingDirection, &Player)>,
@@ -486,13 +486,20 @@ pub fn weapon_rollback_system(
     collision_settings: Res<CollisionSettings>,
 ) {
     // Process weapon firing for all players
-    for (entity,  mut inventory, collision_layer, player) in inventory_query.iter_mut() {
+    for (entity,  mut inventory, sprint_state, dash_state , collision_layer, player) in inventory_query.iter_mut() {
         let (input, _input_status) = inputs[player.handle];
 
         // Do nothing if no weapons
         if inventory.weapons.is_empty() {
             continue;
         }
+
+        if sprint_state.is_sprinting || dash_state.is_dashing || input.buttons & INPUT_SPRINT != 0 || input.buttons & INPUT_DASH != 0 {
+            continue;
+        }
+
+
+        // Nothing to do for weapon if we are sprinting
         
         // Get active weapon
         let (weapon_entity, _) = inventory.weapons[inventory.active_weapon_index];

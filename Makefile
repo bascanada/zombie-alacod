@@ -114,10 +114,12 @@ build_character_tester_web:
 	APP_VERSION=$(VERSION) cargo build --example character_tester --target wasm32-unknown-unknown $(RELEASE)
 	wasm-bindgen --out-dir ./website/static/$(VERSION)/character_tester --out-name wasm --target web $(CARGO_TARGET_DIR)/wasm32-unknown-unknown/$(MODE_DIR)/examples/character_tester.wasm
 
-build_website: cp_asset build_map_preview_web build_character_tester_web
-	cd website && APP_VERSION=$(VERSION) npm run build	
+build_wasm_apps: cp_asset build_map_preview_web build_character_tester_web
 
-build_docker_website: build_website
+build_website: build_wasm_apps
+	cd website && npm ci && APP_VERSION=$(VERSION) npm run build
+
+build_docker_website: build_wasm_apps
 	docker build --build-arg APP_VERSION=$(VERSION) -f ./website/Dockerfile ./website -t ghcr.io/bascanada/zombie-alacod:latest
 
 # Publish

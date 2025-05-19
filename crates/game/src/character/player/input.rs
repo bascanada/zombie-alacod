@@ -8,9 +8,11 @@ use bevy_ggrs::prelude::*;
 use bevy_ggrs::LocalInputs;
 use serde::{Serialize, Deserialize}; 
 
-use crate::character::movement::{MovementConfig, Velocity};
+use crate::character::dash::DashState;
+use crate::character::movement::{MovementConfig, SprintState, Velocity};
 use crate::character::player::{control::PlayerAction, Player};
 use crate::collider::{is_colliding, Collider, CollisionLayer, CollisionSettings, Wall};
+use crate::weapons::WeaponInventory;
 
 use super::config::PlayerConfig;
 use super::config::PlayerConfigHandles;
@@ -23,7 +25,10 @@ const INPUT_DOWN: u16 = 1 << 1;
 const INPUT_LEFT: u16 = 1 << 2;
 const INPUT_RIGHT: u16 = 1 << 3;
 pub const INPUT_RELOAD: u16 = 1 << 4;
-pub const INPUT_SWITCH_WEAPON_MODE: u16 = 1 << 4;
+pub const INPUT_SWITCH_WEAPON_MODE: u16 = 1 << 5;
+pub const INPUT_SPRINT: u16 = 1 << 5;
+pub const INPUT_DASH: u16 = 1 << 6;
+pub const INPUT_MODIFIER: u16 = 1 << 7;
 
 const PAN_FACING_THRESHOLD: i16 = 5;
 
@@ -107,6 +112,17 @@ pub fn read_local_inputs(
             input.buttons |= INPUT_RELOAD;
          }
 
+         if action_state.pressed(&PlayerAction::Sprint) {
+            input.buttons |= INPUT_SPRINT;
+         }
+
+        if action_state.pressed(&PlayerAction::Dash) {
+            input.buttons |= INPUT_DASH;
+        }
+
+        if action_state.pressed(&PlayerAction::Modifier) {
+            input.buttons |= INPUT_MODIFIER;
+        }
 
 
         if let Ok(window) = q_window.get_single() {
@@ -134,16 +150,74 @@ pub fn apply_inputs(
     inputs: Res<PlayerInputs<PeerConfig>>,
     player_configs: Res<Assets<PlayerConfig>>,
 
-    mut query: Query<(Entity, &mut Velocity, &mut ActiveLayers, &mut FacingDirection, &mut CursorPosition, &PlayerConfigHandles, &Player), With<Rollback>>,
+    mut query: Query<(Entity, &WeaponInventory, &mut Transform, &mut DashState, &mut Velocity, &mut ActiveLayers, &mut FacingDirection, &mut CursorPosition, &mut SprintState, &PlayerConfigHandles, &Player), With<Rollback>>,
 
 
     time: Res<Time>,
 ) {
 
-    for (entity, mut velocity, mut active_layers, mut facing_direction , mut cursor_position, config_handles, player) in query.iter_mut() {
+    for (entity, inventory, mut transform, mut dash_state, mut velocity, mut active_layers, mut facing_direction , mut cursor_position, mut sprint_state, config_handles, player) in query.iter_mut() {
         if let Some(config) = player_configs.get(&config_handles.config) {
             let (input, _input_status) = inputs[player.handle];
+            
+            dash_state.update();
+            
+            // If currently dashing, directly update position
+            if dash_state.is_dashing {
+                // Calculate position based on remaining frames and distance
+                let completed_fraction = 1.0 - (dash_state.dash_frames_remaining as f32 / 
+                                              (config.movement.dash_duration_frames as f32));
+                
+                let dash_offset = dash_state.dash_direction * dash_state.dash_total_distance * completed_fraction;
+                transform.translation = dash_state.dash_start_position + Vec3::new(dash_offset.x, dash_offset.y, 0.0);
+                
+                // Zero out velocity while dashing to prevent normal movement physics
+                velocity.0 = Vec2::ZERO;
+                continue;
+            }
+            
+            // Check if player is trying to dash
+            if (input.buttons & INPUT_DASH != 0) && dash_state.can_dash() {
+                // Get looking direction for dash
+                let look_direction = Vec2::new(input.pan_x as f32, input.pan_y as f32);
 
+                let is_reverse_dash = (input.buttons & INPUT_MODIFIER) != 0;
+                
+                // If the player isn't aiming, use facing direction
+                let mut dash_direction = if look_direction.length_squared() > 1.0 {
+                    look_direction.normalize()
+                } else {
+                    Vec2::new(facing_direction.to_int() as f32, 0.0)
+                };
+
+                if is_reverse_dash {
+                    dash_direction = -dash_direction;
+                }
+                
+                // Start dash with current position
+                dash_state.start_dash(
+                    dash_direction, 
+                    transform.translation, 
+                    config.movement.dash_distance,
+                    config.movement.dash_duration_frames
+                );
+                dash_state.set_cooldown(config.movement.dash_cooldown_frames);
+                
+                // Zero out velocity to prevent normal movement physics
+                velocity.0 = Vec2::ZERO;
+                continue;
+            }
+
+            let is_sprinting = input.buttons & INPUT_SPRINT != 0;
+            sprint_state.is_sprinting = is_sprinting;
+            
+            if is_sprinting {
+                sprint_state.sprint_factor += config.movement.sprint_acceleration_per_frame;
+                sprint_state.sprint_factor = sprint_state.sprint_factor.min(1.0);
+            } else {
+                sprint_state.sprint_factor -= config.movement.sprint_deceleration_per_frame;
+                sprint_state.sprint_factor = sprint_state.sprint_factor.max(0.0);
+            }
 
             let mut direction = Vec2::ZERO;
             if input.buttons & INPUT_UP != 0    { direction.y += 1.0; }
@@ -158,9 +232,12 @@ pub fn apply_inputs(
 
 
             if direction != Vec2::ZERO {
-                let move_delta = direction.normalize() * config.movement.acceleration * time.delta().as_secs_f32();
+                let sprint_multiplier = 1.0 + (config.movement.sprint_multiplier - 1.0) * sprint_state.sprint_factor;
+                let move_delta = direction.normalize() * config.movement.acceleration * sprint_multiplier * time.delta().as_secs_f32();
                 velocity.0 += move_delta;
-                velocity.0 = velocity.0.clamp_length_max(config.movement.max_speed);
+                
+                let max_speed = config.movement.max_speed * sprint_multiplier;
+                velocity.0 = velocity.0.clamp_length_max(max_speed);
             }
         }
     }
