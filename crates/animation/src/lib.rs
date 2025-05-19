@@ -314,139 +314,6 @@ fn character_visuals_update_system(
 
 // SYSTEM THAT RUN ON THE BEVY SCHEDULE FOR SYNCH
 
-pub fn character_visuals_spawn_system(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
-    spritesheet_configs: Res<Assets<SpriteSheetConfig>>,
-    animation_configs: Res<Assets<AnimationMapConfig>>,
-    mut query: Query<(Entity, &CharacterAnimationHandles, &mut ActiveLayers, &AnimationState), With<Rollback>>,
-    child_query: Query<&Children>,
-    sprite_query: Query<(Entity, &LayerName, &Sprite)>,
-) {
-    for (entity, config_handles, mut active_layers, mut loading_assets, anim_state) in query.iter_mut() {
-        let total_items = loading_assets.layers.len() + loading_assets.remove.len();
-        let mut processed_count = 0;
-        let mut loaded_items = vec![];
-
-
-        let mut current_frame_index = config_handles.starting_index;
-        
-        // Try to determine the current animation frame from existing sprites
-        if let Ok(children) = child_query.get(entity) {
-            for child in children.iter() {
-                if let Ok((_, _, sprite)) = sprite_query.get(*child) {
-                    if let Some(atlas) = &sprite.texture_atlas {
-                        current_frame_index = atlas.index;
-                        break;
-                    }
-                }
-            }
-        }
-        
-        // If we couldn't find existing sprites, try to determine from animation config
-        if current_frame_index == 0 && anim_state.0 != "Idle" {
-            if let Some(anim_config) = animation_configs.get(&config_handles.animations) {
-                if let Some(indices) = anim_config.animations.get(&anim_state.0) {
-                    current_frame_index = indices.start;
-                }
-            }
-        }
-
-        // Handle layer additions
-        for spritesheet in config_handles.spritesheets.values() {
-            if let Some(spritesheet_config) = spritesheet_configs.get(spritesheet) {
-                if let Some(_) = loading_assets.layers.get(&spritesheet_config.name) {
-                    if asset_server.load_state(spritesheet).is_loaded() {
-                        let texture_handle: Handle<Image> = asset_server.load(&spritesheet_config.path);
-                        let layout = TextureAtlasLayout::from_grid(
-                            UVec2::new(
-                                spritesheet_config.tile_size.0,
-                                spritesheet_config.tile_size.1,
-                            ),
-                            spritesheet_config.columns,
-                            spritesheet_config.rows,
-                            None,
-                            None,
-                        );
-                        let layout_handle = texture_atlas_layouts.add(layout);
-
-                        let mut entity_commands = commands.spawn((
-                            Sprite {
-                                image: texture_handle.clone(),
-                                texture_atlas: Some(TextureAtlas {
-                                    layout: layout_handle.clone(),
-                                    index: current_frame_index,
-                                }),
-                                anchor: spritesheet_config.anchor.to_anchor(),
-                                ..default()
-                            },
-                            Transform::from_scale(Vec3::splat(spritesheet_config.scale))
-                                .with_translation(Vec3::new(spritesheet_config.offset_x, spritesheet_config.offset_y, spritesheet_config.offset_z)),
-                                //.with_rotation(Quat::IDENTITY),
-                            LayerName { name: spritesheet_config.name.clone() },
-                        ));
-
-                        if spritesheet_config.animated {
-                            entity_commands.insert(AnimatedLayer{});
-                        } else {
-                            println!("adding non animation layer {}", spritesheet_config.path);
-                        }
-
-                        let sprite = entity_commands.id();
-
-                        commands.entity(entity).add_rollback().add_child(sprite);
-
-                        // Add to active layers with empty string value (or you could store meaningful metadata here)
-                        active_layers.layers.insert(spritesheet_config.name.clone(), String::new());
-                        
-                        loaded_items.push(spritesheet_config.name.clone());
-                        processed_count += 1;
-                        info!("Spawned layer: {}", spritesheet_config.name);
-                    }
-                }
-            }
-        }
-
-        // Remove processed items from loading queue
-        for key in loaded_items {
-            loading_assets.layers.remove(&key);
-        }
-
-        // Handle layer removals
-        if !loading_assets.remove.is_empty() {
-            if let Ok(children) = child_query.get(entity) {
-                let mut to_despawn = Vec::new();
-                
-                for child in children.iter() {
-                    if let Ok((child_entity, layer_name, _)) = sprite_query.get(*child) {
-                        if loading_assets.remove.contains(&layer_name.name) {
-                            to_despawn.push(child_entity);
-                            active_layers.layers.remove(&layer_name.name);
-                            processed_count += 1;
-                            info!("Despawned layer: {}", layer_name.name);
-                        }
-                    }
-                }
-                
-                // Despawn in a separate loop to avoid borrowing issues
-                for child_entity in to_despawn {
-                    commands.entity(child_entity).despawn_recursive();
-                }
-            }
-            
-            // Clear the removal list
-            loading_assets.remove.clear();
-        }
-
-        // Remove the LoadingAsset component if all operations are complete
-        if processed_count == total_items {
-            info!("All layer operations completed. Processed {} items.", processed_count);
-            commands.entity(entity).remove::<LoadingAsset>();
-        }
-    }
-}
-
 pub fn set_sprite_flip(
     query: Query<(&Children, &FacingDirection), With<Rollback>>,
     mut sprite_query: Query<(&mut Sprite)>,
@@ -509,9 +376,9 @@ pub fn create_child_sprite(
         entity_commands.insert(AnimatedLayer{});
     }
 
-    let sprite = entity_commands.id();
+    let sprite = entity_commands.add_rollback().id();
 
-    commands.entity(parent_entity).add_rollback().add_child(sprite);
+    commands.entity(parent_entity).add_child(sprite);
 
     sprite
 }

@@ -1,5 +1,6 @@
 use std::net::SocketAddr;
 
+use animation::SpriteSheetConfig;
 use bevy::prelude::*;
 use bevy_ggrs::{ggrs::PlayerType, prelude::*};
 use bevy_matchbox::{prelude::PeerState, MatchboxSocket};
@@ -35,6 +36,10 @@ pub fn setup_ggrs_local(
     global_assets: Res<GlobalAsset>,
     character_asset: Res<Assets<CharacterConfig>>,
     weapons_asset: Res<Assets<WeaponsConfig>>,
+
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    sprint_sheet_assets: Res<Assets<SpriteSheetConfig>>,
     session_config: Res<GggrsSessionConfiguration>,
 ) {
 
@@ -54,7 +59,7 @@ pub fn setup_ggrs_local(
             let remote_addr: SocketAddr = addr.parse().unwrap();
             //sess_build = sess_build.add_player(PlayerType::Remote(remote_addr), i).expect("Failed to add player");
         }
-        create_player(&mut commands, &global_assets, &weapons_asset,  &character_asset, &collision_settings, local, i);
+        create_player(&mut commands, &global_assets, &weapons_asset,  &character_asset, &collision_settings, &asset_server, &mut texture_atlas_layouts, &sprint_sheet_assets, local, i);
     }
 
     spawn_test_wall(
@@ -111,6 +116,12 @@ pub fn wait_for_players(
 
     collision_settings: Res<CollisionSettings>,
 
+
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    sprint_sheet_assets: Res<Assets<SpriteSheetConfig>>,
+    session_config: Res<GggrsSessionConfiguration>,
+
     mut commands: Commands, global_assets: Res<GlobalAsset>, weapons_asset: Res<Assets<WeaponsConfig>>, mut socket: ResMut<MatchboxSocket>, ggrs_config: Res<GggrsSessionConfiguration>
 ) {
     // regularly call update_peers to update the list of connected peers
@@ -149,8 +160,9 @@ pub fn wait_for_players(
             .add_player(player, i)
             .expect("failed to add player");
 
-        
-        create_player(&mut commands, &global_assets, &weapons_asset,  &character_asset, &collision_settings, matches!(player, PlayerType::Local), i);
+        let is_local = matches!(player, PlayerType::Local);
+
+        create_player(&mut commands, &global_assets, &weapons_asset,  &character_asset, &collision_settings, &asset_server, &mut texture_atlas_layouts, &sprint_sheet_assets, is_local, i);
     }
 
     spawn_test_wall(

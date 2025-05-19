@@ -1,6 +1,6 @@
 pub mod ui;
 
-use animation::{AnimationBundle, FacingDirection};
+use animation::{create_child_sprite, AnimationBundle, FacingDirection, SpriteSheetConfig};
 use bevy::{math::VectorSpace, prelude::*, utils::{HashMap, HashSet}};
 use bevy_ggrs::{AddRollbackCommandExtension, PlayerInputs, Rollback};
 use ggrs::PlayerHandle;
@@ -300,6 +300,10 @@ pub fn spawn_weapon_for_player(
     commands: &mut Commands,
     global_assets: &Res<GlobalAsset>,
 
+    asset_server: &Res<AssetServer>,
+    texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
+    sprint_sheet_assets: &Res<Assets<SpriteSheetConfig>>,
+
     active: bool,
 
     player_entity: Entity,
@@ -311,7 +315,7 @@ pub fn spawn_weapon_for_player(
     let animation_handle = global_assets.animations.get(&weapon.sprite_config.name).unwrap().clone();
 
     let animation_bundle =
-        AnimationBundle::new(map_layers, animation_handle.clone(), weapon.sprite_config.index, bmap!("body" => String::new()));
+        AnimationBundle::new(map_layers.clone(), animation_handle.clone(), weapon.sprite_config.index, bmap!("body" => String::new()));
 
     let mut weapon_state = WeaponState::default();
     let mut weapon_modes_state = WeaponModesState::default();
@@ -341,6 +345,14 @@ pub fn spawn_weapon_for_player(
         weapon.clone(),
         animation_bundle
     )).add_rollback().id();
+
+
+    let spritesheet_config = sprint_sheet_assets.get(map_layers.get("body").unwrap()).unwrap();
+    create_child_sprite(
+        commands,
+        &asset_server,
+        texture_atlas_layouts,
+        entity.clone(), &spritesheet_config, 0);
 
     inventory.weapons.push((entity.clone(), weapon));
 

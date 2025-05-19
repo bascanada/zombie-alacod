@@ -1,8 +1,9 @@
+use animation::SpriteSheetConfig;
 // crates/game/src/enemy/config.rs
 use bevy::{prelude::*, utils::HashSet};
 use utils::rng::RollbackRng;
 
-use crate::{character::{config::CharacterConfig, player::Player}, collider::{Collider, CollisionSettings}, frame::FrameCount, global_asset::GlobalAsset, weapons::WeaponsConfig};
+use crate::{character::{config::CharacterConfig, player::Player}, collider::{Collider, CollisionSettings, Wall}, frame::FrameCount, global_asset::GlobalAsset, weapons::WeaponsConfig};
 
 use super::{create::spawn_enemy, spawning_basic::{BasicEnemySpawnConfig, BasicEnemySpawnSystem}, Enemy};
 
@@ -10,12 +11,6 @@ use super::{create::spawn_enemy, spawning_basic::{BasicEnemySpawnConfig, BasicEn
 #[reflect]
 pub struct EnemySpawnState {
     pub next_spawn_frame: u32,
-
-    
-    #[reflect(ignore)]
-    pub last_spawn_frame: u32,
-    #[reflect(ignore)]
-    pub spawned_frames: HashSet<u32>,
 }
 
 impl std::hash::Hash for EnemySpawnState {
@@ -37,6 +32,7 @@ pub trait EnemySpawnSystem: Send + Sync + 'static {
         rng: &mut RollbackRng,
         player_positions: &[Vec2],
         enemy_query: &Query<(Entity, &Transform, &Collider), With<Enemy>>,
+        wall_query: &Query<(Entity, &Transform, &Collider), With<Wall>>,
     ) -> Option<Vec2>;
 }
 
@@ -62,18 +58,18 @@ pub fn enemy_spawn_system(
     spawn_system_holder: Res<EnemySpawnSystemHolder>,
     player_query: Query<(&Transform, &Player)>,
     zombie_query: Query<(Entity, &Transform, &Collider), With<Enemy>>,
+    wall_query: Query<(Entity, &Transform, &Collider), With<Wall>>,
     collision_settings: Res<CollisionSettings>,
 
     weapons_asset: Res<Assets<WeaponsConfig>>,
     characters_asset: Res<Assets<CharacterConfig>>,
 
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    sprint_sheet_assets: Res<Assets<SpriteSheetConfig>>,
+
     global_assets: Res<GlobalAsset>,
 ) {
-    println!("current frame {} : last spawn frame {} : next spawn at {}", frame.frame, spawn_state.last_spawn_frame, spawn_state.next_spawn_frame);
-
-    //if spawn_state.spawned_frames.contains(&frame.frame) || frame.frame <= spawn_state.last_spawn_frame {
-    //    return;
-    //}
 
     let spawn_system = &spawn_system_holder.system;
     
@@ -87,8 +83,7 @@ pub fn enemy_spawn_system(
     
     // Calculate next spawn frame
     spawn_state.next_spawn_frame = spawn_system.calculate_next_spawn_frame(&frame, &mut rng);
-    //spawn_state.last_spawn_frame = frame.frame;
-    //spawn_state.spawned_frames.insert(frame.frame);
+
     
     // Collect all player positions
     let player_positions: Vec<Vec2> = player_query
@@ -97,21 +92,7 @@ pub fn enemy_spawn_system(
         .collect();
     
     // Calculate spawn position
-    if let Some(spawn_pos) = spawn_system.calculate_spawn_position(&mut rng, &player_positions, &zombie_query) {
-        spawn_enemy("zombie_1".into(), spawn_pos.extend(0.0), &mut commands, &weapons_asset, &characters_asset, &global_assets, &collision_settings);
-    }
-}
-
-
-pub fn cleanup_spawned_frames(
-    frame: Res<FrameCount>,
-    mut spawn_state: ResMut<EnemySpawnState>,
-) {
-    // Keep only the last 120 frames (2 seconds @ 60 FPS) to avoid unbounded growth
-    const FRAMES_TO_KEEP: u32 = 120;
-    
-    if frame.frame > FRAMES_TO_KEEP {
-        let oldest_frame_to_keep = frame.frame - FRAMES_TO_KEEP;
-        spawn_state.spawned_frames.retain(|&f| f >= oldest_frame_to_keep);
+    if let Some(spawn_pos) = spawn_system.calculate_spawn_position(&mut rng, &player_positions, &zombie_query, &wall_query) {
+        spawn_enemy("zombie_1".into(), spawn_pos.extend(0.0), &mut commands, &weapons_asset, &characters_asset, &asset_server, &mut texture_atlas_layouts, &sprint_sheet_assets, &global_assets, &collision_settings);
     }
 }

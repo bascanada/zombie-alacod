@@ -1,5 +1,5 @@
 
-use animation::AnimationBundle;
+use animation::{AnimationBundle, SpriteSheetConfig};
 use bevy::{math::VectorSpace, prelude::*, utils:: HashMap};
 use leafwing_input_manager::{prelude::ActionState, InputManagerBundle};
 use utils::bmap;
@@ -23,6 +23,10 @@ pub fn create_player(
     weapons_asset: &Res<Assets<WeaponsConfig>>,
     character_asset: &Res<Assets<CharacterConfig>>,
     collision_settings: &Res<CollisionSettings>,
+    asset_server: &Res<AssetServer>,
+    texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
+    sprint_sheet_assets: &Res<Assets<SpriteSheetConfig>>,
+
 
     local: bool,
     handle: usize,
@@ -30,7 +34,7 @@ pub fn create_player(
 
 
     let entity = create_character(
-        commands, global_assets, character_asset, 
+        commands, global_assets, character_asset, asset_server, texture_atlas_layouts, sprint_sheet_assets,
         "player".into(), Some(if local { "1" } else { "2" }.into()),
         Vec3::new(-50.0 * handle as f32, 0.0, 0.0),
         CollisionLayer(collision_settings.player_layer),
@@ -53,7 +57,7 @@ pub fn create_player(
         let mut keys: Vec<&String> = weapons_config.0.keys().collect();
         keys.sort();
         for (i, k) in keys.iter().enumerate() {
-            spawn_weapon_for_player(commands, global_assets, i == 0, entity, weapons_config.0.get(*k).unwrap().clone(), &mut inventory);
+            spawn_weapon_for_player(commands, global_assets, asset_server, texture_atlas_layouts, sprint_sheet_assets, i == 0, entity, weapons_config.0.get(*k).unwrap().clone(), &mut inventory);
         }
     }
     

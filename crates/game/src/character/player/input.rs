@@ -1,5 +1,5 @@
 
-use animation::{toggle_layer, ActiveLayers, FacingDirection};
+use animation::{ActiveLayers, FacingDirection};
 use animation::{AnimationState, CharacterAnimationHandles};
 use bevy::window::PrimaryWindow;
 use bevy::{prelude::*, time::Time, utils::HashMap};

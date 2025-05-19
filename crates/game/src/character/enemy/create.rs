@@ -1,3 +1,4 @@
+use animation::SpriteSheetConfig;
 use bevy::prelude::*;
 
 use crate::{character::{config::{CharacterConfig, CharacterConfigHandles}, create::create_character, movement::Velocity, player::input::CursorPosition}, collider::{Collider, ColliderShape, CollisionLayer, CollisionSettings}, global_asset::GlobalAsset, weapons::{WeaponInventory, WeaponsConfig}};
@@ -10,13 +11,16 @@ pub fn spawn_enemy(
     commands: &mut Commands,
     weapons_asset: &Res<Assets<WeaponsConfig>>,
     characters_asset: &Res<Assets<CharacterConfig>>,
+    asset_server: &Res<AssetServer>,
+    texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
+    sprint_sheet_assets: &Res<Assets<SpriteSheetConfig>>,
 
     global_assets: &Res<GlobalAsset>,
     collision_settings: &Res<CollisionSettings>,
 ) {
 
     let entity = create_character(
-        commands, global_assets, characters_asset,
+        commands, global_assets, characters_asset, asset_server, texture_atlas_layouts, sprint_sheet_assets,
         enemy_type_name, None,
         position, CollisionLayer(collision_settings.enemy_layer)
     );

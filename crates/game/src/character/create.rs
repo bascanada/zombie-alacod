@@ -1,5 +1,5 @@
 
-use animation::AnimationBundle;
+use animation::{create_child_sprite, AnimationBundle, SpriteSheetConfig};
 use bevy::{prelude::*};
 use bevy_kira_audio::prelude::*;
 
@@ -13,6 +13,9 @@ pub fn create_character(
     commands: &mut Commands,
     global_assets: &Res<GlobalAsset>,
     character_asset: &Res<Assets<CharacterConfig>>,
+    asset_server: &Res<AssetServer>,
+    texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
+    sprint_sheet_assets: &Res<Assets<SpriteSheetConfig>>,
 
     config_name: String,
 
@@ -32,7 +35,7 @@ pub fn create_character(
         .layers.clone();
 
     let animation_bundle =
-        AnimationBundle::new(map_layers, animation_handle.clone(),0, starting_layer);
+        AnimationBundle::new(map_layers.clone(), animation_handle.clone(),0, starting_layer.clone());
 
     let collider: Collider = (&config.collider).into();
     let health: Health = config.base_health.clone().into();
@@ -62,11 +65,20 @@ pub fn create_character(
         )).add_rollback();
     });
 
+    let entity = entity.add_rollback().id();
+
+
 
     for k in starting_layer.keys() {
-        
+        let spritesheet_config = sprint_sheet_assets.get(map_layers.get(k).unwrap()).unwrap();
+        create_child_sprite(
+            commands,
+            &asset_server,
+            texture_atlas_layouts,
+            entity.clone(), &spritesheet_config, 0);
     }
 
+    entity
 
-    entity.add_rollback().id()
+
 }
