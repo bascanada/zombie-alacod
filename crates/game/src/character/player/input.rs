@@ -25,9 +25,9 @@ const INPUT_LEFT: u16 = 1 << 2;
 const INPUT_RIGHT: u16 = 1 << 3;
 pub const INPUT_RELOAD: u16 = 1 << 4;
 pub const INPUT_SWITCH_WEAPON_MODE: u16 = 1 << 5;
-pub const INPUT_SPRINT: u16 = 1 << 5;
-pub const INPUT_DASH: u16 = 1 << 6;
-pub const INPUT_MODIFIER: u16 = 1 << 7;
+pub const INPUT_SPRINT: u16 = 1 << 6;
+pub const INPUT_DASH: u16 = 1 << 7;
+pub const INPUT_MODIFIER: u16 = 1 << 8;
 
 const PAN_FACING_THRESHOLD: i16 = 5;
 

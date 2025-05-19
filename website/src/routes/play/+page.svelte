@@ -41,7 +41,7 @@
 
             return () => unsubscribe();
         } else {
-          src = `/loader.html?name=${id}&lobby=test`;
+          src = `/loader.html?name=${id}&lobby=test&version=${customAppVersion}`;
         }
     });
 </script>

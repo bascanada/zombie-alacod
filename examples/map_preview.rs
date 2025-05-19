@@ -39,6 +39,8 @@ fn main() {
             DefaultPlugins
                 .set(AssetPlugin {
                     meta_check: AssetMetaCheck::Never,
+                    #[cfg(target_arch = "wasm32")]
+                    file_path: format!("{}/assets", env!("APP_VERSION")),
                     ..Default::default()
                 })
                 .set(ImagePlugin::default_nearest())
