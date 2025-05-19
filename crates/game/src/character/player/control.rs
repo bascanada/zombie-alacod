@@ -14,11 +14,14 @@ pub enum PlayerAction {
 
     Interaction,
     Sprint,
+    Dash,
 
     SwitchWeapon,
     SwitchWeaponMode,
 
     Reload,
+
+    Modifier,
 
     PointerPosition,
     PointerClick,
@@ -51,6 +54,8 @@ pub fn get_input_map() -> InputMap<PlayerAction> {
         (PlayerAction::MoveCameraRight, KeyCode::ArrowRight),
         (PlayerAction::Interaction, KeyCode::KeyH),
         (PlayerAction::Sprint, KeyCode::ShiftLeft),
+        (PlayerAction::Dash, KeyCode::KeyC),
+        (PlayerAction::Modifier, KeyCode::ControlLeft),
     ]);
     // Add gamepad support if needed
     map.insert(PlayerAction::MoveUp, GamepadButton::DPadUp);
