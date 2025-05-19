@@ -116,6 +116,9 @@ build_character_tester_web:
 
 build_wasm_apps: cp_asset build_map_preview_web build_character_tester_web
 
+build_website: build_wasm_apps
+	de website && npm ci && APP_VERSION=$(VERSION) npm run build
+
 build_docker_website: build_wasm_apps
 	docker build --build-arg APP_VERSION=$(VERSION) -f ./website/Dockerfile ./website -t ghcr.io/bascanada/zombie-alacod:latest
 
