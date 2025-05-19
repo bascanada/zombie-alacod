@@ -63,5 +63,10 @@ pub fn create_character(
     });
 
 
+    for k in starting_layer.keys() {
+        
+    }
+
+
     entity.add_rollback().id()
 }
