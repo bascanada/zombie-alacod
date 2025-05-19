@@ -7,7 +7,7 @@ use crate::{character::{config::CharacterConfigHandles, movement::Velocity}, col
 
 use bevy_ggrs::AddRollbackCommandExtension;
 
-use super::{config::CharacterConfig, health::{ui::HealthBar, DamageAccumulator, Health}};
+use super::{config::CharacterConfig, dash::DashState, health::{ui::HealthBar, DamageAccumulator, Health}, movement::SprintState};
 
 pub fn create_character(
     commands: &mut Commands,
@@ -44,6 +44,8 @@ pub fn create_character(
         Visibility::default(),
         SpatialAudioEmitter {instances: vec![]},
         Velocity(Vec2::ZERO),
+        SprintState::default(),
+        DashState::default(),
         collider,
         health,
         collision_layer,
