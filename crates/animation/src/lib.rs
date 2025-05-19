@@ -268,7 +268,7 @@ fn character_visuals_update_system(
     mut query_sprite: Query<(&mut Sprite,&mut Transform, &LayerName)>,
 ) {
     for event in ev_asset.read() {
-        if let AssetEvent::Modified { id } = event {
+        if let AssetEvent::Modified { id } | AssetEvent::Added { id } = event {
             // Find entities using the modified spritesheet config
             for (childs, entity, config_handle) in query.iter() {
                 for handle in config_handle.spritesheets.values() {
@@ -355,6 +355,7 @@ pub fn create_child_sprite(
         None,
     );
     let layout_handle = texture_atlas_layouts.add(layout);
+
 
     let mut entity_commands = commands.spawn((
         Sprite {

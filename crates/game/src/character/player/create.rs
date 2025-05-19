@@ -35,8 +35,8 @@ pub fn create_player(
 
     let entity = create_character(
         commands, global_assets, character_asset, asset_server, texture_atlas_layouts, sprint_sheet_assets,
-        "player".into(), Some(if local { "1" } else { "2" }.into()),
-        Vec3::new(-50.0 * handle as f32, 0.0, 0.0),
+        "player".into(), Some(if handle == 0 { "1" } else { "2" }.into()),
+         (LinearRgba::GREEN).into(),Vec3::new(-50.0 * handle as f32, 0.0, 0.0),
         CollisionLayer(collision_settings.player_layer),
     );
     if local {

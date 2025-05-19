@@ -6,3 +6,9 @@ pub mod health;
 pub mod create;
 pub mod dash;
 
+
+use bevy::prelude::*;
+
+
+#[derive(Component, Clone, Copy, Default)]
+pub struct Character;

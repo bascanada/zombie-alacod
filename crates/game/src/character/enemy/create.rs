@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 use crate::{character::{config::{CharacterConfig, CharacterConfigHandles}, create::create_character, movement::Velocity, player::input::CursorPosition}, collider::{Collider, ColliderShape, CollisionLayer, CollisionSettings}, global_asset::GlobalAsset, weapons::{WeaponInventory, WeaponsConfig}};
 
-use super::Enemy;
+use super::{ai::pathing::EnemyPath, Enemy};
 
 pub fn spawn_enemy(
     enemy_type_name: String,
@@ -22,7 +22,7 @@ pub fn spawn_enemy(
     let entity = create_character(
         commands, global_assets, characters_asset, asset_server, texture_atlas_layouts, sprint_sheet_assets,
         enemy_type_name, None,
-        position, CollisionLayer(collision_settings.enemy_layer)
+        (LinearRgba::RED).into(),position, CollisionLayer(collision_settings.enemy_layer)
     );
 
     let inventory = WeaponInventory::default();
@@ -30,6 +30,7 @@ pub fn spawn_enemy(
     commands.entity(entity)
         .insert((
             inventory,
+            EnemyPath::default(),
             Enemy::default(),
         ));
 

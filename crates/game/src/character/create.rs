@@ -7,7 +7,7 @@ use crate::{character::{config::CharacterConfigHandles, movement::Velocity}, col
 
 use bevy_ggrs::AddRollbackCommandExtension;
 
-use super::{config::CharacterConfig, dash::DashState, health::{ui::HealthBar, DamageAccumulator, Health}, movement::SprintState};
+use super::{config::CharacterConfig, dash::DashState, health::{ui::HealthBar, DamageAccumulator, Health}, movement::SprintState, Character};
 
 pub fn create_character(
     commands: &mut Commands,
@@ -20,6 +20,7 @@ pub fn create_character(
     config_name: String,
 
     skin: Option<String>,
+    color_health_bar: Color,
     translation: Vec3,
 
     collision_layer: CollisionLayer,
@@ -49,6 +50,7 @@ pub fn create_character(
         collider,
         health,
         collision_layer,
+        Character::default(),
         CharacterConfigHandles {
             config: player_config_handle.clone(),
         },
@@ -59,7 +61,7 @@ pub fn create_character(
         parent.spawn((
             HealthBar,
             Sprite {
-                color: (LinearRgba::GREEN).into(),
+                color: color_health_bar,
                 custom_size: Some(Vec2::new(30.0, 3.0)),
                 ..default()
             },
@@ -68,7 +70,6 @@ pub fn create_character(
     });
 
     let entity = entity.add_rollback().id();
-
 
 
     for k in starting_layer.keys() {

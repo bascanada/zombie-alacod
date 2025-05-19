@@ -28,8 +28,6 @@
         max: 100.0
     ),
 
-
-
     starting_skin: "1",
 
     skins: {
