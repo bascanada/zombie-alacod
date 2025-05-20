@@ -5,7 +5,7 @@ use bevy::{math::VectorSpace, prelude::*, utils::{HashMap, HashSet}};
 use bevy_ggrs::{AddRollbackCommandExtension, PlayerInputs, Rollback};
 use ggrs::PlayerHandle;
 use serde::{Deserialize, Serialize};
-use utils::{bmap, rng::RollbackRng};
+use utils::{bmap, rng::RollbackRng, math::round};
 
 use crate::{character::{dash::DashState, health::{self, DamageAccumulator, Health}, movement::SprintState, player::{input::{CursorPosition, INPUT_DASH, INPUT_RELOAD, INPUT_SPRINT, INPUT_SWITCH_WEAPON_MODE}, jjrs::PeerConfig, Player}}, collider::{is_colliding, Collider, ColliderShape, CollisionLayer, CollisionSettings, Wall}, frame::FrameCount, global_asset::GlobalAsset};
 
@@ -632,7 +632,7 @@ pub fn weapon_rollback_system(
                                         // Fire multiple pellets in a spread pattern
                                         for _ in 0..pellet_count {
                                             // Calculate a random angle within the spread range
-                                            let pellet_angle = (rng.next_f32() - 0.5) * spread_angle;
+                                            let pellet_angle = (round(rng.next_f32()) - 0.5) * spread_angle;
                                             let spread_rotation = Mat2::from_angle(pellet_angle);
                                             let direction = spread_rotation * aim_dir;
 
@@ -749,7 +749,7 @@ pub fn bullet_rollback_collision_system(
     mut collider_query: Query<(Entity, &Transform, &Collider, &CollisionLayer, Option<&Wall>, Option<&Health>, Option<&mut DamageAccumulator>), (Without<Bullet>, With<Rollback>)>,
 ) {
     // Track bullets to despawn after processing
-    let mut bullets_to_despawn = HashSet::new();
+    let mut bullets_to_despawn = Vec::new();
     
     for (bullet_entity, bullet_transform, bullet, bullet_collider, bullet_layer) in bullet_query.iter() {
         // Skip already processed bullets
@@ -773,7 +773,7 @@ pub fn bullet_rollback_collision_system(
                     BulletType::Standard { .. } => {
                        
                         // Standard bullets are destroyed on impact
-                        bullets_to_despawn.insert(bullet_entity);
+                        bullets_to_despawn.push(bullet_entity);
                         break;
                     },
                     BulletType::Explosive { blast_radius, .. } => {
@@ -789,14 +789,14 @@ pub fn bullet_rollback_collision_system(
                         */
                         
                         // Explosive bullets are destroyed on impact
-                        bullets_to_despawn.insert(bullet_entity);
+                        bullets_to_despawn.push(bullet_entity);
                         break;
                     },
                     BulletType::Piercing { .. } => {
                         // Mark target as hit
 
                         if opt_wall.is_some() {
-                            bullets_to_despawn.insert(bullet_entity);
+                            bullets_to_despawn.push(bullet_entity);
                             break;
                         }
                         /*
@@ -812,6 +812,9 @@ pub fn bullet_rollback_collision_system(
             }
         }
     }
+
+    // Sort by entity ID for Deterministic delete ?????
+    bullets_to_despawn.sort_by_key(|entity| entity.index());
     
     // Despawn bullets
     for entity in bullets_to_despawn {

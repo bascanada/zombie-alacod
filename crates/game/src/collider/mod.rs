@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_ggrs::AddRollbackCommandExtension;
 use serde::{Deserialize, Serialize};
+use utils::math::round_vec2;
 
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -86,8 +87,8 @@ pub fn is_colliding(
     transform_b: &Transform,
     collider_b: &Collider,
 ) -> bool {
-    let pos_a = transform_a.translation.truncate() + collider_a.offset;
-    let pos_b = transform_b.translation.truncate() + collider_b.offset;
+    let pos_a = round_vec2(transform_a.translation.truncate() + collider_a.offset);
+    let pos_b = round_vec2(transform_b.translation.truncate() + collider_b.offset);
 
     match (&collider_a.shape, &collider_b.shape) {
         // Circle to Circle
@@ -151,6 +152,8 @@ pub fn circle_rect_collision(
     // Circle and rectangle collide if this distance is less than the circle radius
     distance < circle_radius
 }
+
+
 
 
 
