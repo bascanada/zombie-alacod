@@ -84,13 +84,21 @@ pub fn enemy_spawn_system(
     // Calculate next spawn frame
     spawn_state.next_spawn_frame = spawn_system.calculate_next_spawn_frame(&frame, &mut rng);
 
-    
-    // Collect all player positions
-    let player_positions: Vec<Vec2> = player_query
+
+    let mut player_data: Vec<(usize, Vec2)> = player_query
         .iter()
-        .map(|(transform, _)| transform.translation.truncate())
+        .map(|(transform, player)| (player.handle as usize, transform.translation.truncate()))
         .collect();
-    
+
+    // Sort by player handle (which should be stable across clients)
+    player_data.sort_by_key(|(handle, _)| *handle);
+
+    // Now extract just the positions in a deterministic order
+    let player_positions: Vec<Vec2> = player_data
+        .into_iter()
+        .map(|(_, pos)| pos)
+        .collect();
+        
     // Calculate spawn position
     if let Some(spawn_pos) = spawn_system.calculate_spawn_position(&mut rng, &player_positions, &zombie_query, &wall_query) {
         spawn_enemy("zombie_1".into(), spawn_pos.extend(0.0), &mut commands, &weapons_asset, &characters_asset, &asset_server, &mut texture_atlas_layouts, &sprint_sheet_assets, &global_assets, &collision_settings);
