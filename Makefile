@@ -101,7 +101,8 @@ host_website:
 	cd website && APP_VERSION=$(VERSION) npm run dev
 
 cp_asset:
-	cp -r ./assets/ ./website/static/$(VERSION)/
+	mkdir -p ./website/static/$(VERSION)/assets/
+	cp -r ./assets/* ./website/static/$(VERSION)/assets/
 
 build_docker_matchbox_server:
 	docker build -f ./crates/matchbox_server/Dockerfile ./crates/matchbox_server/ -t ghcr.io/bascanada/matchbox_server:latest
