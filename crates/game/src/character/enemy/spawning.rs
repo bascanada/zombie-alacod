@@ -99,8 +99,14 @@ pub fn enemy_spawn_system(
         .map(|(_, pos)| pos)
         .collect();
         
+    let enemy_type_name = if (frame.frame % 5) == 0 {
+        "zombie_2".into()
+    } else {
+        "zombie_1".into()
+    };
+    
     // Calculate spawn position
     if let Some(spawn_pos) = spawn_system.calculate_spawn_position(&mut rng, &player_positions, &zombie_query, &wall_query) {
-        spawn_enemy("zombie_1".into(), spawn_pos.extend(0.0), &mut commands, &weapons_asset, &characters_asset, &asset_server, &mut texture_atlas_layouts, &sprint_sheet_assets, &global_assets, &collision_settings);
+        spawn_enemy(enemy_type_name, spawn_pos.extend(0.0), &mut commands, &weapons_asset, &characters_asset, &asset_server, &mut texture_atlas_layouts, &sprint_sheet_assets, &global_assets, &collision_settings);
     }
 }

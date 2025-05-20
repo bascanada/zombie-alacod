@@ -1,7 +1,7 @@
 (
     movement: (
-        acceleration: 400.0,
-        max_speed: 400.0,
+        acceleration: 300.0,
+        max_speed: 300.0,
         friction: 100.0,
 
         sprint_multiplier: 2.0,                // Double speed
@@ -25,7 +25,7 @@
 
     scale: 6.0,
     base_health: (
-        max: 100.0
+        max: 50.0
     ),
 
     starting_skin: "1",
