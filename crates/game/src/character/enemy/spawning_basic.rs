@@ -21,10 +21,10 @@ pub struct BasicEnemySpawnConfig {
 impl Default for BasicEnemySpawnConfig {
     fn default() -> Self {
         Self {
-            timeout_range: (1.0,10.0),
+            timeout_range: (5.0,10.0),
             max_enemies: 5,
-            spawn_radius: 1000.0,
-            min_player_distance: 200.0,
+            spawn_radius: 1500.0,
+            min_player_distance: 800.0,
         }
     }
 }

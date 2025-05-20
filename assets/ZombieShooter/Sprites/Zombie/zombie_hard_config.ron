@@ -13,7 +13,7 @@
         dash_cooldown_frames: 180,     // Half-second cooldown
     ),
 
-    asset_name_ref: "zombie_1",
+    asset_name_ref: "zombie_2",
 
     collider: (
         shape: Rectangle(

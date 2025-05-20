@@ -14,7 +14,7 @@
                         speed: 900.0,
                     ),
                     range: 700.0,
-                    reload_time_seconds: 1.5,
+                    reload_time_seconds: 1.0,
                     mag: Mag(
                         mag_size: 6,
                         mag_limit: 8,
@@ -53,7 +53,7 @@
                         speed: 1000.0,
                     ),
                     range: 900.0,
-                    reload_time_seconds: 2.5,
+                    reload_time_seconds: 1.5,
                     mag: Mag(
                         mag_size: 30,
                         mag_limit: 8,
@@ -69,7 +69,7 @@
                         speed: 1000.0,
                     ),
                     range: 900.0,
-                    reload_time_seconds: 2.5,
+                    reload_time_seconds: 0.7,
                     mag: Mag(
                         mag_size: 30,
                         mag_limit: 8,
@@ -108,11 +108,11 @@
                     recoil: 8.0,
                     mag_size: 5000,
                     bullet_type: Standard(
-                        damage: 8.0,
+                        damage: 30.0,
                         speed: 1000.0,
                     ),
                     range: 400.0,
-                    reload_time_seconds: 3.0,
+                    reload_time_seconds: 0.8,
                     mag: Magless(
                         bullet_limit: 64,
                     )
