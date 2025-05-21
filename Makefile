@@ -1,6 +1,6 @@
 PROFILE ?= dev
 
-NUMBER_PLAYER ?= 2
+NUMBER_PLAYER ?= 4
 
 
 CURRENT_TAG := $(shell git describe --tags --exact-match HEAD 2>/dev/null)

@@ -13,7 +13,6 @@ pub struct EnemySpawnerState {
     pub cooldown_remaining: u32,
     pub last_spawn_frame: u32,
     pub active: bool,
-    pub current_enemies: u32,
 }
 
 
@@ -22,7 +21,6 @@ impl Default for EnemySpawnerState {
         Self {
             cooldown_remaining: 0,
             last_spawn_frame: 0,
-            current_enemies: 0,
             active: true,
         }
     } 
@@ -51,6 +49,7 @@ pub fn enemy_spawn_from_spawners_system(
         .collect();
     
     if player_positions.is_empty() {
+        println!("Frame {}: No players found, skipping spawn", frame.frame);
         return; // No players, don't spawn
     }
     
@@ -59,6 +58,7 @@ pub fn enemy_spawn_from_spawners_system(
     let global_max_enemies = 20; // This could be a global config
     
     if current_enemies >= global_max_enemies {
+        println!("Frame {}: Global max enemies reached", frame.frame);
         return; // Already at global max enemies
     }
     
@@ -70,11 +70,6 @@ pub fn enemy_spawn_from_spawners_system(
             if state.cooldown_remaining > 0 {
                 state.cooldown_remaining -= 1;
             }
-            continue;
-        }
-        
-        // Skip if this spawner has reached its individual max
-        if state.current_enemies >= config.max_enemies {
             continue;
         }
         
@@ -130,7 +125,6 @@ pub fn enemy_spawn_from_spawners_system(
         // Update state
         state.cooldown_remaining = config.max_cooldown;
         state.last_spawn_frame = frame.frame;
-        state.current_enemies += 1;
         
         // We only spawn one enemy per system call
         break;

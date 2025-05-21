@@ -170,16 +170,31 @@ pub fn wait_for_players(
     app_state.set(AppState::InGame);
 }
 
-pub fn log_ggrs_events(mut session: ResMut<bevy_ggrs::Session<PeerConfig>>) {
-    match session.as_mut() {
-        Session::P2P(s) => {
-            //println!("GGRS_SESSION : STATE {:?} FRAME {}", s.current_state(), s.current_frame());
-            for event in s.events() {
-                println!("GGRS Event: {event:?}");
+pub fn log_ggrs_events(
+    mut session: ResMut<bevy_ggrs::Session<PeerConfig>>,
+) {
+        if let Session::P2P(session) = session.as_mut() {
+            for event in session.events() {
+                info!("GGRS Event: {:?}", event);
+                match event {
+                    GgrsEvent::Disconnected { addr } => {
+                        panic!("Other player@{:?} disconnected", addr)
+                    }
+                    GgrsEvent::DesyncDetected {
+                        frame,
+                        local_checksum,
+                        remote_checksum,
+                        addr,
+                    } => {
+                        error!(
+                            "Desync detected on frame {} local {} remote {}@{:?}",
+                            frame, local_checksum, remote_checksum, addr
+                        );
+                    }
+                    _ => (),
+                }
             }
         }
-        _ => panic!("This example focuses on p2p."),
-    }
 }
 
 

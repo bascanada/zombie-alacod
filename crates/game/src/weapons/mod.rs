@@ -750,19 +750,32 @@ pub fn bullet_rollback_collision_system(
 ) {
     // Track bullets to despawn after processing
     let mut bullets_to_despawn = Vec::new();
-    
+
     for (bullet_entity, bullet_transform, bullet, bullet_collider, bullet_layer) in bullet_query.iter() {
         // Skip already processed bullets
         if bullets_to_despawn.contains(&bullet_entity) {
             continue;
         }
-        
+
+        let mut collision_targets: Vec<_> = collider_query.iter_mut().collect();
+        collision_targets.sort_by(|(_, transform_a, _, _, _, _, _), (_, transform_b, _, _, _, _, _)| {
+            let pos_a = transform_a.translation.truncate();
+            let pos_b = transform_b.translation.truncate();
+            
+            let x_cmp = ((pos_a.x * 1000.0) as i32).cmp(&((pos_b.x * 1000.0) as i32));
+            if x_cmp == std::cmp::Ordering::Equal {
+                ((pos_a.y * 1000.0) as i32).cmp(&((pos_b.y * 1000.0) as i32))
+            } else {
+                x_cmp
+            }
+        });
+            
         for (target_entity, target_transform, target_collider, target_layer, opt_wall, opt_health, opt_accumulator) in collider_query.iter_mut() {
             // Check if these layers should collide
             if !settings.layer_matrix[bullet_layer.0 as usize][target_layer.0 as usize] {
                 continue;
             }
-            
+
             // Check for collision using our new helper function
             if is_colliding(bullet_transform, bullet_collider, target_transform, target_collider) { 
                 if opt_health.is_some() {
