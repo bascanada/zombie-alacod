@@ -2,6 +2,7 @@ use bevy::{asset::AssetMetaCheck, prelude::*};
 use bevy_ggrs::{prelude::*, GgrsSchedule};
 use bevy_kira_audio::prelude::*;
 use leafwing_input_manager::plugin::InputManagerPlugin;
+use utils::rng::RollbackRng;
 use std::hash::Hash;
 use bevy_common_assets::ron::RonAssetPlugin;
 
@@ -69,6 +70,7 @@ impl Plugin for BaseZombieGamePlugin {
 
         app.set_rollback_schedule_fps(60);
         app.add_plugins(GgrsPlugin::<PeerConfig>::default())
+            .rollback_resource_with_copy::<RollbackRng>()
             .rollback_resource_with_reflect::<PathfindingConfig>()
             .rollback_resource_with_reflect::<EnemySpawnState>()
             .rollback_resource_with_copy::<PointerWorldPosition>()
