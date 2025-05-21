@@ -6,6 +6,7 @@ use std::collections::VecDeque;
 use crate::character::config::{CharacterConfig, CharacterConfigHandles};
 use crate::character::enemy::Enemy;
 use crate::character::movement::Velocity;
+use crate::character::player::input::FIXED_TIMESTEP;
 use crate::character::player::Player;
 use crate::collider::{Collider, is_colliding, Wall};
 use crate::frame::FrameCount;
@@ -284,7 +285,6 @@ pub fn move_enemies(
     player_query: Query<&Transform, (With<Player>, Without<Enemy>)>,
     character_configs: Res<Assets<CharacterConfig>>,
     config: Res<PathfindingConfig>,
-    time: Res<Time>,
 ) {
     // First pass - collect all enemy positions for separation calculation
     let enemy_positions: Vec<(Entity, Vec2)> = enemy_query
@@ -397,8 +397,8 @@ pub fn move_enemies(
         
         // Apply movement
         if velocity.length_squared() > 0.01 {
-            transform.translation.x += velocity.x * time.delta().as_secs_f32();
-            transform.translation.y += velocity.y * time.delta().as_secs_f32();
+            transform.translation.x += velocity.x * FIXED_TIMESTEP;
+            transform.translation.y += velocity.y * FIXED_TIMESTEP;
             
             // Update facing direction based on movement
             if velocity.x > 0.1 {

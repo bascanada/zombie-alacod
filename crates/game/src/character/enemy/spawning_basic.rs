@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use serde::Deserialize;
+use utils::math::round_vec3;
 use crate::frame::FrameCount;
 use utils::rng::RollbackRng;
 use crate::collider::{is_colliding, Collider, ColliderShape, Wall};
@@ -108,7 +109,9 @@ impl EnemySpawnSystem for BasicEnemySpawnSystem {
                 offset: Vec2::ZERO,
             };
             
-            let spawn_transform = Transform::from_translation(Vec3::new(spawn_pos.x, spawn_pos.y, 0.0));
+            let spawn_transform = Transform::from_translation(
+                round_vec3(Vec3::new(spawn_pos.x, spawn_pos.y, 0.0))
+            );
             
             // Check collision with existing enemies
             for (_, zombie_transform, zombie_collider) in enemy_query.iter() {

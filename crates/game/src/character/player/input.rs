@@ -13,10 +13,13 @@ use crate::character::dash::DashState;
 use crate::character::movement::{MovementConfig, SprintState, Velocity};
 use crate::character::player::{control::PlayerAction, Player};
 use crate::collider::{is_colliding, Collider, CollisionLayer, CollisionSettings, Wall};
+use crate::frame::FrameCount;
 use crate::weapons::WeaponInventory;
 
 use super::jjrs::PeerConfig;
 use super::LocalPlayer;
+
+pub const FIXED_TIMESTEP: f32 = 1.0 / 60.0; // 60 FPS fixed timestep
 
 
 const INPUT_UP: u16 = 1 << 0;
@@ -148,13 +151,9 @@ pub fn apply_inputs(
     mut commands: Commands,
     inputs: Res<PlayerInputs<PeerConfig>>,
     character_configs: Res<Assets<CharacterConfig>>,
-
     mut query: Query<(Entity, &WeaponInventory, &mut Transform, &mut DashState, &mut Velocity, &mut ActiveLayers, &mut FacingDirection, &mut CursorPosition, &mut SprintState, &CharacterConfigHandles, &Player), With<Rollback>>,
-
-    time: Res<Time>,
 ) {
-
-    for (entity, inventory, mut transform, mut dash_state, mut velocity, mut active_layers, mut facing_direction , mut cursor_position, mut sprint_state, config_handles, player) in query.iter_mut() {
+    for (entity, inventory, mut transform, mut dash_state, mut velocity, mut active_layers, mut facing_direction, mut cursor_position, mut sprint_state, config_handles, player) in query.iter_mut() {
         if let Some(config) = character_configs.get(&config_handles.config) {
             let (input, _input_status) = inputs[player.handle];
             
@@ -228,10 +227,10 @@ pub fn apply_inputs(
             cursor_position.x = input.pan_x as i32;
             cursor_position.y = input.pan_y as i32;
 
-
             if direction != Vec2::ZERO {
                 let sprint_multiplier = 1.0 + (config.movement.sprint_multiplier - 1.0) * sprint_state.sprint_factor;
-                let move_delta = direction.normalize() * config.movement.acceleration * sprint_multiplier * time.delta().as_secs_f32();
+                // Using FIXED_TIMESTEP instead of time.delta()
+                let move_delta = direction.normalize() * config.movement.acceleration * sprint_multiplier * FIXED_TIMESTEP;
                 velocity.0 += move_delta;
                 
                 let max_speed = config.movement.max_speed * sprint_multiplier;
@@ -245,7 +244,6 @@ pub fn apply_friction(
     inputs: Res<PlayerInputs<PeerConfig>>,
     movement_configs: Res<Assets<CharacterConfig>>,
     mut query: Query<(&mut Velocity, &CharacterConfigHandles, &Player), With<Rollback>>,
-    time: Res<Time>,
 ) {
     for (mut velocity, config_handles, player) in query.iter_mut() {
         if let Some(config) = movement_configs.get(&config_handles.config) {
@@ -254,7 +252,7 @@ pub fn apply_friction(
             let moving = input.buttons & INPUT_RIGHT != 0 || input.buttons & INPUT_LEFT != 0 || input.buttons & INPUT_UP != 0 || input.buttons & INPUT_DOWN != 0;
 
             if !moving && velocity.length_squared() > 0.1 {
-                velocity.0 *= (1.0 - config.movement.friction * time.delta().as_secs_f32()).max(0.0);
+                velocity.0 *= (1.0 - config.movement.friction * FIXED_TIMESTEP).max(0.0);
                 if velocity.length_squared() < 1.0 {
                     velocity.0 = Vec2::ZERO;
                 }
@@ -267,12 +265,11 @@ pub fn move_characters(
     mut query: Query<(&mut Transform, &mut Velocity, &Collider, &CollisionLayer), (With<Rollback>, With<Player>)>,
     settings: Res<CollisionSettings>,
     collider_query: Query<(Entity, &Transform, &Collider, &CollisionLayer), (With<Wall>, Without<Player>)>,
-    time: Res<Time>,
 ) {
     'mainloop: for (mut transform, mut velocity, player_collider, collision_layer) in query.iter_mut() {
         let mut new_transform = transform.clone();
-        new_transform.translation.x += velocity.x * time.delta().as_secs_f32();
-        new_transform.translation.y += velocity.y * time.delta().as_secs_f32();
+        new_transform.translation.x += velocity.x * FIXED_TIMESTEP;
+        new_transform.translation.y += velocity.y * FIXED_TIMESTEP;
 
         for (target_entity, target_transform, target_collider, target_layer) in collider_query.iter() {
             if !settings.layer_matrix[collision_layer.0 as usize][target_layer.0 as usize] {

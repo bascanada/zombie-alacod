@@ -61,7 +61,6 @@ pub fn rollback_apply_accumulated_damage(
 
             if health.current <= 0. {
                 commands.entity(entity).insert(Death{ last_hit_by: accumulator.last_hit_by.clone( )});
-                return;
             }
         }
     }

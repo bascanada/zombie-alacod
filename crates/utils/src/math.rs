@@ -1,3 +1,5 @@
+use bevy::math::{Vec2, Vec3};
+
 use crate::rng::RollbackRng;
 
 
@@ -34,6 +36,26 @@ pub fn calculate_time_remaining_seconds(ending_frame_number: u32, current_frame:
     let time_remaining_seconds: f32 = frames_remaining as f32 / 60.0;
 
     time_remaining_seconds
+}
+
+
+pub fn round(n: f32) -> f32 {
+    (n * 1000.0).round() / 1000.0
+}
+
+pub fn round_vec2(v: Vec2) -> Vec2 {
+    Vec2::new(
+        (v.x * 1000.0).round() / 1000.0, 
+        (v.y * 1000.0).round() / 1000.0
+    )
+}
+
+pub fn round_vec3(v: Vec3) -> Vec3 {
+    Vec3::new(
+        (v.x * 1000.0).round() / 1000.0, 
+        (v.y * 1000.0).round() / 1000.0,
+        (v.z * 1000.0).round() / 1000.0,
+    )
 }
 
 

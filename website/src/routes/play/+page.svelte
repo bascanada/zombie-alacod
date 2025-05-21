@@ -22,21 +22,32 @@
 
     onMount(() => {
         const urlParams = new URLSearchParams(window.location.search);
+
         const id = urlParams.get('id');
-        const online = urlParams.get("online");
+        const supportOnline = urlParams.get("online");
+
+        const argLobbyName = urlParams.get("lobby");
+        const argSize = urlParams.get("size");
 
 
-        if (online == "true") {
+
+        if (supportOnline == "true") {
             const unsubscribe = settingsStore.subscribe(settings => {
-                const setSrc = (online: boolean) => src = `/loader.html?name=${id}&lobby=${settings.lobbyName}&version=${customAppVersion}` + (online ? `&matchbox=${settings.matchboxServer}&lobby_size=${settings.playerCount}` : "" );
+                const lobby = argLobbyName != null ? argLobbyName : settings.lobbyName;
+                const size = argSize != null ? argSize : settings.playerCount;
+                const setSrc = (online: boolean) => src = `/loader.html?name=${id}&lobby=${lobby}&version=${customAppVersion}` + (online ? `&matchbox=${settings.matchboxServer}&lobby_size=${size}` : "" );
                 const elemModal: HTMLDialogElement | null = document.querySelector('[data-dialog]');
                 const elemTrigger: HTMLButtonElement | null = document.querySelector('[data-dialog-yes]');
                 const elemClose: HTMLButtonElement | null = document.querySelector('[data-dialog-no]');
 
-                elemModal?.showModal();
+                if (argLobbyName != null) {
+                  setSrc(true);
+                } else {
+                  elemModal?.showModal();
 
-                elemTrigger?.addEventListener('click', () =>{ elemModal?.close(); setSrc(true) });
-                elemClose?.addEventListener('click', () => { elemModal?.close(); setSrc(false) });
+                  elemTrigger?.addEventListener('click', () =>{ elemModal?.close(); setSrc(true) });
+                  elemClose?.addEventListener('click', () => { elemModal?.close(); setSrc(false) });
+                }
             });
 
             return () => unsubscribe();

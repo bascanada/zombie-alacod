@@ -20,7 +20,7 @@ function generateRandomString(length: number) {
 
 // Default settings
 const defaultSettings: Settings = {
-  matchboxServer: 'wss://matchbox.example.com',
+  matchboxServer: 'wss://matchbox.bascanada.org',
   lobbyName: generateRandomString(6),
   playerCount: 2
 };
@@ -37,7 +37,7 @@ const createSettingsStore = () => {
     // Load settings from localStorage
     load: () => {
       try {
-        const storedSettings = localStorage.getItem('appSettings');
+        const storedSettings = localStorage.getItem('matchboxSettings');
         if (storedSettings) {
           // Merge with defaults in case new settings were added
           set({ ...defaultSettings, ...JSON.parse(storedSettings) });
@@ -49,7 +49,7 @@ const createSettingsStore = () => {
     // Save current settings to localStorage
     save: (settings: Settings) => {
       try {
-        localStorage.setItem('appSettings', JSON.stringify(settings));
+        localStorage.setItem('matchboxSettings', JSON.stringify(settings));
         return true;
       } catch (error) {
         console.error('Failed to save settings:', error);
@@ -59,7 +59,7 @@ const createSettingsStore = () => {
     // Reset to defaults
     reset: () => {
       set(defaultSettings);
-      localStorage.setItem('appSettings', JSON.stringify(defaultSettings));
+      localStorage.setItem('matchboxSettings', JSON.stringify(defaultSettings));
     }
   };
 };
