@@ -8,6 +8,7 @@ on:
 
 env: 
   CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
 
 jobs:
   build_and_test:
@@ -45,11 +46,7 @@ jobs:
         run: make format
       - name: Build web
         run:  make build_docker_website TARGET=web PROFILE=prod
-      - name: Build matchbox
-        run: make build_docker_matchbox_server 
-      - name: Publish docker matchbox
-        run: make push_docker_matchbox_server
       - name: Publish docker website
         run: make push_docker_website
       - name: Update deployment
-        run: doctl apps create-deployment 12321cca-c9b1-4e19-9961-3d5ebc8ff12a && doctl apps create-deployment a5542b50-f1f1-4b33-9fe6-f96cae8ff8cb
+        run: doctl apps create-deployment 12321cca-c9b1-4e19-9961-3d5ebc8ff12a

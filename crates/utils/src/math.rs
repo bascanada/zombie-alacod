@@ -39,7 +39,6 @@ pub fn calculate_time_remaining_seconds(ending_frame_number: u32, current_frame:
     time_remaining_seconds
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*; // Import items from the parent module (RollbackRng)

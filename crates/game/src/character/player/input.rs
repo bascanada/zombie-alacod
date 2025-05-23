@@ -271,7 +271,7 @@ pub fn move_characters(
         let mut new_transform = transform.clone();
         new_transform.translation.x += velocity.x * fixed_math::new(FIXED_TIMESTEP);
         new_transform.translation.y += velocity.y * fixed_math::new(FIXED_TIMESTEP);
-
+        
         for (target_entity, target_transform, target_collider, target_layer) in collider_query.iter() {
             if !settings.layer_matrix[collision_layer.0 as usize][target_layer.0 as usize] {
                 continue;

@@ -408,7 +408,6 @@ fn spawn_bullet_rollback(
     } else {
         weapon.sprite_config.bullet_offset_left
     };
-    
 
     let fixed_weapon_translation: fixed_math::FixedVec3 = weapon_transform.translation;
     let fixed_weapon_rotation_mat3: fixed_math::FixedMat3 = weapon_transform.rotation.clone();
@@ -489,7 +488,6 @@ fn spawn_bullet_rollback(
     entity_commands.add_rollback().id()
 
 }
-
 
 
 // SYSTEMS
@@ -747,19 +745,18 @@ pub fn bullet_rollback_system(
 ) {
     for (entity, mut transform, mut bullet, bullet_state) in bullet_query.iter_mut() {
         // Move bullet based on velocity (fixed timestep)
-        let delta = bullet.velocity;
+        let delta = bullet.velocity; // Assume bullet.velocity is already deterministic for this frame
+
+        // Apply movement
         transform.translation.x += delta.x;
         transform.translation.y += delta.y;
-        
-        // Track distance traveled (fixed timestep version)
+
+
         bullet.distance_traveled += delta.length();
-        
-        // Destroy bullet if it exceeds its range
+
         if bullet.distance_traveled >= bullet.range {
             commands.entity(entity).despawn();
         }
-
-        // Maybe also lifetime frame
     }
 }
 
@@ -785,88 +782,79 @@ fn apply_bullet_dommage(
     }
 }
 
-// Collision detection system (inside rollback)
+
 pub fn bullet_rollback_collision_system(
     mut commands: Commands,
     settings: Res<CollisionSettings>,
     bullet_query: Query<(Entity, &fixed_math::FixedTransform3D, &Bullet, &Collider, &CollisionLayer), With<Rollback>>,
     mut collider_query: Query<(Entity, &fixed_math::FixedTransform3D, &Collider, &CollisionLayer, Option<&Wall>, Option<&Health>, Option<&mut DamageAccumulator>), (Without<Bullet>, With<Rollback>)>,
 ) {
-    // Track bullets to despawn after processing
-    let mut bullets_to_despawn = Vec::new();
-    
+    let mut bullets_to_despawn_set = HashSet::new(); // Use HashSet for efficient duplicate avoidance and checks
+
     for (bullet_entity, bullet_transform, bullet, bullet_collider, bullet_layer) in bullet_query.iter() {
-        // Skip already processed bullets
-        if bullets_to_despawn.contains(&bullet_entity) {
+        // Skip already processed bullets that are marked for despawn
+        if bullets_to_despawn_set.contains(&bullet_entity) {
             continue;
         }
-        
-        for (target_entity, target_transform, target_collider, target_layer, opt_wall, opt_health, opt_accumulator) in collider_query.iter_mut() {
-            // Check if these layers should collide
+
+        // Phase 1: Identify all entities this bullet is colliding with
+        for (target_entity, target_transform, target_collider, target_layer, opt_wall, opt_health, opt_accumulator_mut) in collider_query.iter_mut() { // Note: iter() not iter_mut() for the broad phase
             if !settings.layer_matrix[bullet_layer.0 as usize][target_layer.0 as usize] {
                 continue;
             }
-            
+
             // Check for collision using our new helper function
             if is_colliding(&bullet_transform.translation, bullet_collider, &target_transform.translation, target_collider) { 
+
                 if opt_health.is_some() {
-                    apply_bullet_dommage(&mut commands, target_entity, bullet, opt_accumulator);
+                    // Apply damage (using the refactored logic from your apply_bullet_dommage function)
+                    if let Some(mut accumulator) = opt_accumulator_mut {
+                        // Update existing accumulator
+                        accumulator.total_damage += bullet.damage;
+                        accumulator.hit_count += 1;
+                        accumulator.last_hit_by = Some(health::HitBy::Player(bullet.player_handle));
+                    } else {
+                        // Insert new accumulator if it doesn't exist
+                        commands.entity(target_entity).insert(DamageAccumulator {
+                            hit_count: 1,
+                            total_damage: bullet.damage,
+                            last_hit_by: Some(health::HitBy::Player(bullet.player_handle)),
+                        });
+                    }
                 }
 
+                let mut should_bullet_despawn_now = false;
                 match bullet.bullet_type {
                     BulletType::Standard { .. } => {
-                       
-                        // Standard bullets are destroyed on impact
-                        bullets_to_despawn.push(bullet_entity);
-                        break;
+                        should_bullet_despawn_now = true;
                     },
                     BulletType::Explosive { blast_radius, .. } => {
- 
-                        // Add explosion marker to bullet entity
-                        /*
-                        commands.entity(bullet_entity).insert(ExplosionMarker {
-                            radius: blast_radius,
-                            damage: bullet.damage,
-                            player_handle: bullet.player_handle,
-                            processed: false,
-                        });
-                        */
-                        
-                        // Explosive bullets are destroyed on impact
-                        bullets_to_despawn.push(bullet_entity);
-                        break;
+                        should_bullet_despawn_now = true;
                     },
                     BulletType::Piercing { .. } => {
-                        // Mark target as hit
-
                         if opt_wall.is_some() {
-                            bullets_to_despawn.push(bullet_entity);
-                            break;
+                            should_bullet_despawn_now = true;
                         }
-                        /*
-                        if let Some(counter) = penetration_counter {
-                            if counter.remaining <= 1 {
-                                bullets_to_despawn.insert(bullet_entity);
-                                break;
-                            }
-                            // Reduce counter in next system
-                        }*/
                     },
+                }
+
+                if should_bullet_despawn_now {
+                    bullets_to_despawn_set.insert(bullet_entity);
+                    break; // Bullet is destroyed, stop processing more targets for this bullet
                 }
             }
         }
     }
 
-    // Sort by entity ID for Deterministic delete ?????
-    bullets_to_despawn.sort_by_key(|entity| entity.index());
+    // Convert HashSet to Vec and sort by entity ID for deterministic despawning
+    let mut bullets_to_despawn_vec: Vec<Entity> = bullets_to_despawn_set.into_iter().collect();
+    bullets_to_despawn_vec.sort_by_key(|entity| entity.index());
     
     // Despawn bullets
-    for entity in bullets_to_despawn {
-        commands.entity(entity).despawn();
+    for entity in bullets_to_despawn_vec {
+        commands.entity(entity).despawn(); // Despawn if the entity still exists
     }
 }
-
-
 
 // Non rollback system to display the weapon correct sprite
 pub fn weapon_inventory_system(
