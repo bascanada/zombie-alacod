@@ -1,7 +1,7 @@
 use bevy::{prelude::*, reflect::TypePath, utils::HashMap};
 use serde::Deserialize;
 
-use crate::{character::movement::MovementConfig, collider::{Collider, ColliderConfig}};
+use crate::{character::movement::MovementConfig};
 
 use super::health::HealthConfig;
 
@@ -18,8 +18,6 @@ pub struct CharacterConfig {
     pub asset_name_ref: String,
 
     pub base_health: HealthConfig,
-
-    pub collider: ColliderConfig,
 
     pub scale: f32,
 

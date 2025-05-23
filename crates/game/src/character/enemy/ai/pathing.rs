@@ -5,10 +5,7 @@ use utils::rng::RollbackRng;
 use std::collections::VecDeque;
 use crate::character::config::{CharacterConfig, CharacterConfigHandles};
 use crate::character::enemy::Enemy;
-use crate::character::movement::Velocity;
-use crate::character::player::input::FIXED_TIMESTEP;
 use crate::character::player::Player;
-use crate::collider::{Collider, is_colliding, Wall};
 use crate::frame::FrameCount;
 
 
@@ -125,9 +122,10 @@ pub fn update_enemy_targets(
     }
 }
 
+/*
 // System to check if direct path is clear
 pub fn check_direct_paths(
-    wall_query: Query<(&Transform, &Collider), With<Wall>>,
+    wall_query: Query<(&Transform), With<Wall>>,
     mut enemy_query: Query<(&Transform, &mut EnemyPath), With<Enemy>>,
     config: Res<PathfindingConfig>,
 ) {
@@ -417,3 +415,4 @@ fn update_facing_direction(facing_direction: &mut FacingDirection, velocity: &Ve
         *facing_direction = FacingDirection::Left;
     }
 }
+    */

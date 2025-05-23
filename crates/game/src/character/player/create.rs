@@ -5,7 +5,7 @@ use leafwing_input_manager::{prelude::ActionState, InputManagerBundle};
 use utils::bmap;
 use bevy_kira_audio::prelude::*;
 
-use crate::{character::{config::CharacterConfig, create::create_character, dash::DashState, movement::{SprintState, Velocity}}, collider::{Collider, ColliderShape, CollisionLayer, CollisionSettings}, global_asset::GlobalAsset, weapons::{spawn_weapon_for_player, FiringMode, Weapon, WeaponInventory, WeaponsConfig}};
+use crate::{character::{config::CharacterConfig, create::create_character}, global_asset::GlobalAsset, weapons::{spawn_weapon_for_player, FiringMode, Weapon, WeaponInventory, WeaponsConfig}};
 
 use bevy_ggrs::AddRollbackCommandExtension;
 use super::{control::{get_input_map, PlayerAction}, input::CursorPosition, LocalPlayer, Player};
@@ -22,7 +22,6 @@ pub fn create_player(
     global_assets: &Res<GlobalAsset>,
     weapons_asset: &Res<Assets<WeaponsConfig>>,
     character_asset: &Res<Assets<CharacterConfig>>,
-    collision_settings: &Res<CollisionSettings>,
     asset_server: &Res<AssetServer>,
     texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
     sprint_sheet_assets: &Res<Assets<SpriteSheetConfig>>,
@@ -37,7 +36,6 @@ pub fn create_player(
         commands, global_assets, character_asset, asset_server, texture_atlas_layouts, sprint_sheet_assets,
         "player".into(), Some(if handle == 0 { "1" } else { "2" }.into()),
          (LinearRgba::GREEN).into(),Vec3::new(-50.0 * handle as f32, 0.0, 0.0),
-        CollisionLayer(collision_settings.player_layer),
     );
     if local {
         commands.entity(entity)

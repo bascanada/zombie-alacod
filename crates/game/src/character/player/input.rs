@@ -1,6 +1,7 @@
 
 use animation::{ActiveLayers, FacingDirection};
 use animation::{AnimationState, CharacterAnimationHandles};
+use avian2d::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy::{prelude::*, time::Time, utils::HashMap};
 use leafwing_input_manager::prelude::*;
@@ -10,10 +11,8 @@ use serde::{Serialize, Deserialize};
 
 use crate::character::config::{CharacterConfig, CharacterConfigHandles};
 use crate::character::dash::DashState;
-use crate::character::movement::{MovementConfig, SprintState, Velocity};
+use crate::character::movement::{FrameMovementIntent, SprintState};
 use crate::character::player::{control::PlayerAction, Player};
-use crate::collider::{is_colliding, Collider, CollisionLayer, CollisionSettings, Wall};
-use crate::frame::FrameCount;
 use crate::weapons::WeaponInventory;
 
 use super::jjrs::PeerConfig;
@@ -151,25 +150,45 @@ pub fn apply_inputs(
     mut commands: Commands,
     inputs: Res<PlayerInputs<PeerConfig>>,
     character_configs: Res<Assets<CharacterConfig>>,
-    mut query: Query<(Entity, &WeaponInventory, &mut Transform, &mut DashState, &mut Velocity, &mut ActiveLayers, &mut FacingDirection, &mut CursorPosition, &mut SprintState, &CharacterConfigHandles, &Player), With<Rollback>>,
+    // Query for Avian's Position if you're directly manipulating it,
+    // or your own component that will store the intended move for another system.
+    mut query: Query<(
+        Entity,
+        &WeaponInventory,
+        &Transform, // Read-only for current position if needed for dash start
+        &mut DashState,
+        &mut FrameMovementIntent, // NEW: To store what this system decides
+        &mut ActiveLayers,
+        &mut FacingDirection,
+        &mut CursorPosition,
+        &mut SprintState,
+        &CharacterConfigHandles,
+        &Player,
+        // Option<&mut AvianLinearVelocity> // If you decide to use a Dynamic body for some states
+    ), With<Rollback>>,
 ) {
-    for (entity, inventory, mut transform, mut dash_state, mut velocity, mut active_layers, mut facing_direction, mut cursor_position, mut sprint_state, config_handles, player) in query.iter_mut() {
+    for (
+        entity, inventory, transform, mut dash_state, /*mut velocity,*/
+        mut frame_intent, mut active_layers, mut facing_direction,
+        mut cursor_position, mut sprint_state, config_handles, player,
+        // opt_lin_vel
+    ) in query.iter_mut() {
         if let Some(config) = character_configs.get(&config_handles.config) {
             let (input, _input_status) = inputs[player.handle];
             
             dash_state.update();
-            
-            // If currently dashing, directly update position
+            frame_intent.delta_position = Vec2::ZERO; // Reset intent for the frame
+            frame_intent.is_dashing_this_frame = false;
+            frame_intent.dash_target_position = None;
+
             if dash_state.is_dashing {
-                // Calculate position based on remaining frames and distance
+                frame_intent.is_dashing_this_frame = true;
                 let completed_fraction = 1.0 - (dash_state.dash_frames_remaining as f32 / 
                                               (config.movement.dash_duration_frames as f32));
-                
                 let dash_offset = dash_state.dash_direction * dash_state.dash_total_distance * completed_fraction;
-                transform.translation = dash_state.dash_start_position + Vec3::new(dash_offset.x, dash_offset.y, 0.0);
-                
-                // Zero out velocity while dashing to prevent normal movement physics
-                velocity.0 = Vec2::ZERO;
+                // Store the absolute target position for the dash this frame
+                frame_intent.dash_target_position = Some(dash_state.dash_start_position + Vec3::new(dash_offset.x, dash_offset.y, 0.0));
+                // No other movement if dashing
                 continue;
             }
             
@@ -191,17 +210,18 @@ pub fn apply_inputs(
                     dash_direction = -dash_direction;
                 }
                 
-                // Start dash with current position
                 dash_state.start_dash(
                     dash_direction, 
-                    transform.translation, 
+                    transform.translation, // Start dash from current Transform's translation
                     config.movement.dash_distance,
                     config.movement.dash_duration_frames
                 );
-                dash_state.set_cooldown(config.movement.dash_cooldown_frames);
-                
-                // Zero out velocity to prevent normal movement physics
-                velocity.0 = Vec2::ZERO;
+                // ...
+                // Signal that a dash just started, movement will be handled next frame by the is_dashing block
+                frame_intent.is_dashing_this_frame = true; // Dash starts, movement applied in next frame's is_dashing block
+                let dash_offset = dash_state.dash_direction * dash_state.dash_total_distance * (1.0 / config.movement.dash_duration_frames as f32);
+                frame_intent.dash_target_position = Some(transform.translation + Vec3::new(dash_offset.x, dash_offset.y, 0.0));
+
                 continue;
             }
 
@@ -229,12 +249,12 @@ pub fn apply_inputs(
 
             if direction != Vec2::ZERO {
                 let sprint_multiplier = 1.0 + (config.movement.sprint_multiplier - 1.0) * sprint_state.sprint_factor;
-                // Using FIXED_TIMESTEP instead of time.delta()
-                let move_delta = direction.normalize() * config.movement.acceleration * sprint_multiplier * FIXED_TIMESTEP;
-                velocity.0 += move_delta;
-                
-                let max_speed = config.movement.max_speed * sprint_multiplier;
-                velocity.0 = velocity.0.clamp_length_max(max_speed);
+                let move_amount = config.movement.acceleration * sprint_multiplier * FIXED_TIMESTEP; // This is now an "attempted move amount"
+                // Instead of accumulating velocity, we calculate the intended delta for this frame.
+                // A more physics-based approach for Dynamic bodies would be to apply forces/impulses
+                // or set LinearVelocity. For Kinematic, we calculate the desired position change.
+                let current_velocity_contribution = direction.normalize() * move_amount;
+                frame_intent.delta_position += current_velocity_contribution;
             }
         }
     }
@@ -242,52 +262,65 @@ pub fn apply_inputs(
 
 pub fn apply_friction(
     inputs: Res<PlayerInputs<PeerConfig>>,
-    movement_configs: Res<Assets<CharacterConfig>>,
-    mut query: Query<(&mut Velocity, &CharacterConfigHandles, &Player), With<Rollback>>,
+    character_configs: Res<Assets<CharacterConfig>>,
+    // This depends on how you structure the output of apply_inputs_avian
+    mut query: Query<(&mut FrameMovementIntent, &CharacterConfigHandles, &Player), With<Rollback>>,
 ) {
-    for (mut velocity, config_handles, player) in query.iter_mut() {
-        if let Some(config) = movement_configs.get(&config_handles.config) {
-            let (input, _input_status) = inputs[player.handle];
+    for (mut frame_intent, config_handles, player) in query.iter_mut() {
+        if frame_intent.is_dashing_this_frame { continue; } // No friction during dash
 
+        if let Some(config) = character_configs.get(&config_handles.config) {
+            let (input, _input_status) = inputs[player.handle];
             let moving = input.buttons & INPUT_RIGHT != 0 || input.buttons & INPUT_LEFT != 0 || input.buttons & INPUT_UP != 0 || input.buttons & INPUT_DOWN != 0;
 
-            if !moving && velocity.length_squared() > 0.1 {
-                velocity.0 *= (1.0 - config.movement.friction * FIXED_TIMESTEP).max(0.0);
-                if velocity.length_squared() < 1.0 {
-                    velocity.0 = Vec2::ZERO;
+
+            if !moving && frame_intent.delta_position.length_squared() > 0.01 { // If there's intended movement but no input
+                // Reduce the intended delta_position by a friction factor
+                frame_intent.delta_position *= (1.0 - config.movement.friction * FIXED_TIMESTEP).max(0.0);
+                if frame_intent.delta_position.length_squared() < 0.001 { // Threshold to snap to zero
+                    frame_intent.delta_position = Vec2::ZERO;
                 }
             }
         }
     }
 }
 
-pub fn move_characters(
-    mut query: Query<(&mut Transform, &mut Velocity, &Collider, &CollisionLayer), (With<Rollback>, With<Player>)>,
-    settings: Res<CollisionSettings>,
-    collider_query: Query<(Entity, &Transform, &Collider, &CollisionLayer), (With<Wall>, Without<Player>)>,
-) {
-    'mainloop: for (mut transform, mut velocity, player_collider, collision_layer) in query.iter_mut() {
-        let mut new_transform = transform.clone();
-        new_transform.translation.x += velocity.x * FIXED_TIMESTEP;
-        new_transform.translation.y += velocity.y * FIXED_TIMESTEP;
 
-        for (target_entity, target_transform, target_collider, target_layer) in collider_query.iter() {
-            if !settings.layer_matrix[collision_layer.0 as usize][target_layer.0 as usize] {
-                continue;
+pub fn apply_kinematic_player_movement(
+    mut query: Query<(&mut Position, &FrameMovementIntent), (With<Player>)>,
+) {
+    for (mut avian_pos, frame_intent) in query.iter_mut() {
+        if frame_intent.is_dashing_this_frame {
+            if let Some(target_pos) = frame_intent.dash_target_position {
+                // Directly set position for dash. Avian will resolve penetrations if any.
+                avian_pos.0 = target_pos.truncate(); // Avian Position is Vec2
             }
-            if is_colliding(&new_transform, player_collider, target_transform, target_collider) {
-                velocity.0 = Vec2::ZERO;
-                continue 'mainloop;
-            }
+        } else {
+            // Apply the calculated delta for normal movement
+            avian_pos.0 += frame_intent.delta_position;
         }
-        *transform = new_transform;
+        println!("AVIAN POSITION {:?}", avian_pos);
+        // After this system, Avian's physics step will run.
+        // It will see the new avian_pos.0, detect collisions, and correct avian_pos.0
+        // to prevent penetration. Bevy's Transform will then usually be updated from AvianPosition.
     }
 }
 
-pub fn update_animation_state(mut query: Query<(&Velocity, &mut AnimationState), With<Rollback>>) {
-    for (velocity, mut state) in query.iter_mut() {
+
+pub fn update_animation_state(
+    // Query Avian's LinearVelocity if available and reflective of movement,
+    // or the FrameMovementIntent if that's a better proxy for "trying to move".
+    // If LinearVelocity is not reliably populated for Kinematic,
+    // you might need to store previous AvianPosition and compare to current to get actual delta.
+    mut query: Query<(&FrameMovementIntent, /* Option<&AvianLinearVelocity>, */ &mut AnimationState), With<Rollback>>
+) {
+    for (frame_intent, /* opt_lin_vel, */ mut state) in query.iter_mut() {
         let current_state_name = state.0.clone();
-        let new_state_name = if velocity.length_squared() > 0.5 { "Run" } else { "Idle" };
+        // Base animation on intended movement, or actual velocity if available
+        let is_moving = frame_intent.delta_position.length_squared() > 0.001 || frame_intent.is_dashing_this_frame;
+        // if let Some(lin_vel) = opt_lin_vel { is_moving = lin_vel.length_squared() > 0.5; }
+
+        let new_state_name = if is_moving { "Run" } else { "Idle" };
         if current_state_name != new_state_name { state.0 = new_state_name.to_string(); }
     }
 }

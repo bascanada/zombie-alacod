@@ -1,9 +1,7 @@
 use animation::AnimationState;
 use bevy::{prelude::*};
 use bevy_ggrs::Rollback;
-use serde::Deserialize;
-
-use crate::collider::{is_colliding, Collider, CollisionLayer, CollisionSettings, Wall};
+use serde::{Deserialize, Serialize};
 
 use super::{config::{CharacterConfig, CharacterConfigHandles}, Character};
 
@@ -28,5 +26,10 @@ pub struct SprintState {
     pub sprint_factor: f32,  // Ranges from 0.0 to 1.0 for gradual acceleration
 }
 
-#[derive(Component, Default, Reflect, Deref, DerefMut, Clone)]
-pub struct Velocity(pub Vec2);
+
+#[derive(Component, Default, Clone, Debug, Serialize, Deserialize)]
+pub struct FrameMovementIntent {
+    pub delta_position: Vec2,
+    pub is_dashing_this_frame: bool, // Flag to signal dash movement
+    pub dash_target_position: Option<Vec3>, // If dashing, what's the target for this frame
+}

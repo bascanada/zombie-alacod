@@ -1,9 +1,9 @@
 use bevy::prelude::*;
+use map::game::entity::map::wall::Wall;
 use serde::Deserialize;
 use utils::math::round_vec3;
 use crate::frame::FrameCount;
 use utils::rng::RollbackRng;
-use crate::collider::{is_colliding, Collider, ColliderShape, Wall};
 
 use super::spawning::{EnemySpawnState, EnemySpawnSystem};
 use super::Enemy;
@@ -58,8 +58,8 @@ impl EnemySpawnSystem for BasicEnemySpawnSystem {
         &self,
         rng: &mut RollbackRng,
         player_positions: &[Vec2],
-        enemy_query: &Query<(Entity, &Transform, &Collider), With<Enemy>>,
-        wall_query: &Query<(Entity, &Transform, &Collider), With<Wall>>,
+        enemy_query: &Query<(Entity, &Transform), With<Enemy>>,
+        wall_query: &Query<(Entity, &Transform), With<Wall>>,
     ) -> Option<Vec2> {
         if player_positions.is_empty() {
             return None;
@@ -104,17 +104,20 @@ impl EnemySpawnSystem for BasicEnemySpawnSystem {
             }
             
             // Create a test collider for the potential spawn
+            /*
             let spawn_collider = Collider {
                 shape: ColliderShape::Circle { radius: 30.0 },
                 offset: Vec2::ZERO,
             };
+            */
             
             let spawn_transform = Transform::from_translation(
                 round_vec3(Vec3::new(spawn_pos.x, spawn_pos.y, 0.0))
             );
             
             // Check collision with existing enemies
-            for (_, zombie_transform, zombie_collider) in enemy_query.iter() {
+            for (_, zombie_transform) in enemy_query.iter() {
+                /*
                 if is_colliding(
                     &spawn_transform,
                     &spawn_collider,
@@ -124,11 +127,13 @@ impl EnemySpawnSystem for BasicEnemySpawnSystem {
                     valid_position = false;
                     break;
                 }
+                */
             }
             
             // Check collision with walls
             if valid_position {
-                for (_, wall_transform, wall_collider) in wall_query.iter() {
+                for (_, wall_transform) in wall_query.iter() {
+                    /*
                     if is_colliding(
                         &spawn_transform,
                         &spawn_collider,
@@ -138,6 +143,7 @@ impl EnemySpawnSystem for BasicEnemySpawnSystem {
                         valid_position = false;
                         break;
                     }
+                    */
                 }
             }
             

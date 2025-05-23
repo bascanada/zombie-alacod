@@ -1,13 +1,14 @@
 
 use animation::{create_child_sprite, AnimationBundle, SpriteSheetConfig};
+use avian2d::prelude::*;
 use bevy::{prelude::*};
 use bevy_kira_audio::prelude::*;
 
-use crate::{character::{config::CharacterConfigHandles, movement::Velocity}, collider::{Collider, ColliderShape, CollisionLayer, CollisionSettings}, global_asset::GlobalAsset, weapons::{spawn_weapon_for_player, FiringMode, Weapon, WeaponInventory, WeaponsConfig}};
+use crate::{character::config::CharacterConfigHandles, collider::{ENEMY_LAYER, PLAYER_LAYER, WALL_LAYER}, global_asset::GlobalAsset, weapons::{spawn_weapon_for_player, FiringMode, Weapon, WeaponInventory, WeaponsConfig}};
 
 use bevy_ggrs::AddRollbackCommandExtension;
 
-use super::{config::CharacterConfig, dash::DashState, health::{ui::HealthBar, DamageAccumulator, Health}, movement::SprintState, Character};
+use super::{config::CharacterConfig, dash::DashState, health::{ui::HealthBar, DamageAccumulator, Health}, movement::{FrameMovementIntent, SprintState}, Character};
 
 pub fn create_character(
     commands: &mut Commands,
@@ -22,8 +23,6 @@ pub fn create_character(
     skin: Option<String>,
     color_health_bar: Color,
     translation: Vec3,
-
-    collision_layer: CollisionLayer,
 ) -> Entity {
     let handle = global_assets.character_configs.get(&config_name).unwrap();
     let config = character_asset.get(handle).unwrap();
@@ -38,18 +37,18 @@ pub fn create_character(
     let animation_bundle =
         AnimationBundle::new(map_layers.clone(), animation_handle.clone(),0, starting_layer.clone());
 
-    let collider: Collider = (&config.collider).into();
     let health: Health = config.base_health.clone().into();
     let mut entity = commands.spawn((
         Transform::from_scale(Vec3::splat(config.scale)).with_translation(translation),
         Visibility::default(),
         SpatialAudioEmitter {instances: vec![]},
-        Velocity(Vec2::ZERO),
         SprintState::default(),
         DashState::default(),
-        collider,
+        RigidBody::Kinematic{}, // Key Avian component
+        avian2d::prelude::Collider::rectangle(60., 120.), // Example
+        FrameMovementIntent::default(),
+        CollisionLayers::new(PLAYER_LAYER, WALL_LAYER | ENEMY_LAYER), 
         health,
-        collision_layer,
         Character::default(),
         CharacterConfigHandles {
             config: player_config_handle.clone(),

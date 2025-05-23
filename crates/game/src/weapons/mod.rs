@@ -7,7 +7,7 @@ use ggrs::PlayerHandle;
 use serde::{Deserialize, Serialize};
 use utils::{bmap, rng::RollbackRng, math::round};
 
-use crate::{character::{dash::DashState, health::{self, DamageAccumulator, Health}, movement::SprintState, player::{input::{CursorPosition, INPUT_DASH, INPUT_RELOAD, INPUT_SPRINT, INPUT_SWITCH_WEAPON_MODE}, jjrs::PeerConfig, Player}}, collider::{is_colliding, Collider, ColliderShape, CollisionLayer, CollisionSettings, Wall}, frame::FrameCount, global_asset::GlobalAsset};
+use crate::{character::{dash::DashState, health::{self, DamageAccumulator, Health}, movement::SprintState, player::{input::{CursorPosition, INPUT_DASH, INPUT_RELOAD, INPUT_SPRINT, INPUT_SWITCH_WEAPON_MODE}, jjrs::PeerConfig, Player}}, frame::FrameCount, global_asset::GlobalAsset};
 
 // ROOLBACL
 
@@ -379,8 +379,6 @@ fn spawn_bullet_rollback(
     range: f32,
     player_handle: PlayerHandle,
     current_frame: u32,
-    collision_settings: &Res<CollisionSettings>,
-    parent_layer: &CollisionLayer,
 ) -> Entity {
     let (velocity, damage, range, radius) = match &bullet_type {
         BulletType::Standard { speed, damage: damage_bullet } => {
@@ -428,11 +426,6 @@ fn spawn_bullet_rollback(
             initial_position: firing_position_v2,
             direction,
         },
-        Collider {
-            offset: Vec2::ZERO,
-            shape: ColliderShape::Circle { radius },
-        },
-        CollisionLayer(parent_layer.0),
         transform,
     ));
 
@@ -490,15 +483,13 @@ pub fn weapon_rollback_system(
     inputs: Res<PlayerInputs<PeerConfig>>,
     frame: Res<FrameCount>,
 
-    mut inventory_query: Query<(Entity, &mut WeaponInventory, &SprintState, &DashState, &CollisionLayer, &Player)>,
+    mut inventory_query: Query<(Entity, &mut WeaponInventory, &SprintState, &DashState, &Player)>,
     mut weapon_query: Query<(&mut Weapon, &mut WeaponState, &mut WeaponModesState, &GlobalTransform, &Parent)>,
 
     player_query: Query<(&GlobalTransform, &FacingDirection, &Player)>,
-
-    collision_settings: Res<CollisionSettings>,
 ) {
     // Process weapon firing for all players
-    for (entity,  mut inventory, sprint_state, dash_state , collision_layer, player) in inventory_query.iter_mut() {
+    for (entity,  mut inventory, sprint_state, dash_state , player) in inventory_query.iter_mut() {
         let (input, _input_status) = inputs[player.handle];
 
         // Do nothing if no weapons
@@ -646,8 +637,6 @@ pub fn weapon_rollback_system(
                                                 weapon_config.range,
                                                 player.handle,
                                                 frame.frame,
-                                                &collision_settings,
-                                                collision_layer,
                                             );
                                         }
                                         weapon_mode_state.mag_ammo -= 1; // Shotgun uses one ammo for all pellets
@@ -669,8 +658,6 @@ pub fn weapon_rollback_system(
                                             weapon_config.range,
                                             player.handle,
                                             frame.frame,
-                                            &collision_settings,
-                                            collision_layer,
                                         );
                                         weapon_mode_state.mag_ammo -= 1;
 
@@ -741,6 +728,7 @@ fn apply_bullet_dommage(
     }
 }
 
+/*
 // Collision detection system (inside rollback)
 pub fn bullet_rollback_collision_system(
     mut commands: Commands,
@@ -821,6 +809,7 @@ pub fn bullet_rollback_collision_system(
         commands.entity(entity).despawn();
     }
 }
+*/
 
 
 

@@ -1,9 +1,10 @@
 use animation::SpriteSheetConfig;
 // crates/game/src/enemy/config.rs
 use bevy::{prelude::*, utils::HashSet};
+use map::game::entity::map::wall::Wall;
 use utils::rng::RollbackRng;
 
-use crate::{character::{config::CharacterConfig, player::Player}, collider::{Collider, CollisionSettings, Wall}, frame::FrameCount, global_asset::GlobalAsset, weapons::WeaponsConfig};
+use crate::{character::{config::CharacterConfig, player::Player}, frame::FrameCount, global_asset::GlobalAsset, weapons::WeaponsConfig};
 
 use super::{create::spawn_enemy, spawning_basic::{BasicEnemySpawnConfig, BasicEnemySpawnSystem}, Enemy};
 
@@ -20,9 +21,6 @@ impl std::hash::Hash for EnemySpawnState {
 }
 
 
-
-
-
 // Trait for different spawn systems
 pub trait EnemySpawnSystem: Send + Sync + 'static {
     fn should_spawn(&self, frame: &FrameCount, state: &EnemySpawnState, current_enemies: u32) -> bool;
@@ -31,8 +29,8 @@ pub trait EnemySpawnSystem: Send + Sync + 'static {
         &self,
         rng: &mut RollbackRng,
         player_positions: &[Vec2],
-        enemy_query: &Query<(Entity, &Transform, &Collider), With<Enemy>>,
-        wall_query: &Query<(Entity, &Transform, &Collider), With<Wall>>,
+        enemy_query: &Query<(Entity, &Transform), With<Enemy>>,
+        wall_query: &Query<(Entity, &Transform), With<Wall>>,
     ) -> Option<Vec2>;
 }
 
@@ -57,9 +55,8 @@ pub fn enemy_spawn_system(
     mut rng: ResMut<RollbackRng>,
     spawn_system_holder: Res<EnemySpawnSystemHolder>,
     player_query: Query<(&Transform, &Player)>,
-    zombie_query: Query<(Entity, &Transform, &Collider), With<Enemy>>,
-    wall_query: Query<(Entity, &Transform, &Collider), With<Wall>>,
-    collision_settings: Res<CollisionSettings>,
+    zombie_query: Query<(Entity, &Transform), With<Enemy>>,
+    wall_query: Query<(Entity, &Transform), With<Wall>>,
 
     weapons_asset: Res<Assets<WeaponsConfig>>,
     characters_asset: Res<Assets<CharacterConfig>>,
@@ -107,6 +104,6 @@ pub fn enemy_spawn_system(
     
     // Calculate spawn position
     if let Some(spawn_pos) = spawn_system.calculate_spawn_position(&mut rng, &player_positions, &zombie_query, &wall_query) {
-        spawn_enemy(enemy_type_name, spawn_pos.extend(0.0), &mut commands, &weapons_asset, &characters_asset, &asset_server, &mut texture_atlas_layouts, &sprint_sheet_assets, &global_assets, &collision_settings);
+        spawn_enemy(enemy_type_name, spawn_pos.extend(0.0), &mut commands, &weapons_asset, &characters_asset, &asset_server, &mut texture_atlas_layouts, &sprint_sheet_assets, &global_assets);
     }
 }

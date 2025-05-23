@@ -1,7 +1,5 @@
 use bevy::prelude::*;
 
-use crate::collider::{Collider, ColliderShape, CollisionLayer};
-
 #[derive(Resource, Default)]
 struct DebugOverlayState {
     is_sprite_visible: bool,
@@ -67,9 +65,10 @@ fn draw_sprite_debug_rects_system(
     }
 }
 
+/*
 pub fn debug_draw_colliders_system(
     mut gizmos: Gizmos,
-    collider_query: Query<(&Transform, &Collider, &CollisionLayer)>,
+    collider_query: Query<(&Transform)>,
 ) {
     // Draw regular colliders
     for (transform, collider, layer) in collider_query.iter() {
@@ -96,6 +95,7 @@ pub fn debug_draw_colliders_system(
         
     }
 }
+*/
 
 
 
@@ -117,8 +117,8 @@ impl Plugin for SpriteDebugOverlayPlugin {
                     // Apply the run condition for the drawing system
                     draw_sprite_debug_rects_system
                         .run_if(|state: Res<DebugOverlayState>| state.is_sprite_visible),
-                    debug_draw_colliders_system
-                        .run_if(|state: Res<DebugOverlayState>| state.is_hitbox_visible),
+                    //debug_draw_colliders_system
+                    //    .run_if(|state: Res<DebugOverlayState>| state.is_hitbox_visible),
                 )
             );
     }
