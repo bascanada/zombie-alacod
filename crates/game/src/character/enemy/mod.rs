@@ -1,6 +1,5 @@
 pub mod create;
 pub mod spawning;
-pub mod spawning_basic;
 pub mod ai;
 
 

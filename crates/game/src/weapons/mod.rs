@@ -5,7 +5,7 @@ use bevy::{math::VectorSpace, prelude::*, utils::{HashMap, HashSet}};
 use bevy_ggrs::{AddRollbackCommandExtension, PlayerInputs, Rollback};
 use ggrs::PlayerHandle;
 use serde::{Deserialize, Serialize};
-use utils::{bmap, rng::RollbackRng, math::round};
+use utils::{bmap, math::{round, round_vec3}, rng::RollbackRng};
 
 use crate::{character::{dash::DashState, health::{self, DamageAccumulator, Health}, movement::SprintState, player::{input::{CursorPosition, INPUT_DASH, INPUT_RELOAD, INPUT_SPRINT, INPUT_SWITCH_WEAPON_MODE}, jjrs::PeerConfig, Player}}, collider::{is_colliding, Collider, ColliderShape, CollisionLayer, CollisionSettings, Wall}, frame::FrameCount, global_asset::GlobalAsset};
 
@@ -405,7 +405,7 @@ fn spawn_bullet_rollback(
     } else {
         weapon.sprite_config.bullet_offset_left
     };
-    let firing_position = weapon_transform.transform_point(firing_position_v2.extend(0.));
+    let firing_position = round_vec3(weapon_transform.transform_point(firing_position_v2.extend(0.)));
     let (_, weapon_world_rotation, _) = weapon_transform.affine().to_scale_rotation_translation();
 
     let transform = Transform::from_translation(firing_position)
@@ -463,10 +463,29 @@ pub fn system_weapon_position(
                 for child in childs.iter() {
                     if let Ok((mut sprite)) = query_sprite.get_mut(*child) {
 
-                        let vec = Vec2::new(cursor_position.x as f32, cursor_position.y as f32);
+                        let vec = Vec2::new(cursor_position.x as f32, cursor_position.y as f32); // Ensure cursor_position fields are clean if f32
                         let angle_radians = vec.y.atan2(vec.x);
-                        
-                        transform.rotation = Quat::from_rotation_z(angle_radians);
+                        // Optional: You can round angle_radians here if it's used for other deterministic logic like deriving FacingDirection
+                        // let clean_angle_for_logic = round_f32(angle_radians);
+
+                        let unrounded_quat = Quat::from_rotation_z(angle_radians); // Or use clean_angle_for_logic
+
+                        // Round each component of the quaternion
+                        let rounded_quat = Quat::from_xyzw(
+                            round(unrounded_quat.x),
+                            round(unrounded_quat.y),
+                            round(unrounded_quat.z),
+                            round(unrounded_quat.w),
+                        );
+
+                        // IMPORTANT: A quaternion representing a rotation must be a unit quaternion (length 1).
+                        // Rounding its components can make it slightly non-unit. So, normalize it.
+                        // However, .normalize() itself uses f32 math (sqrt).
+                        // If the rounded_quat components are "clean" (e.g., only have 3 decimal places),
+                        // the result of .normalize() is *more likely* to be deterministic, but it's a complex spot.
+                        // For perfect determinism, you'd ideally want a "deterministic normalize" or ensure
+                        // the rounding factor is chosen such that normalization is stable.
+                        transform.rotation = rounded_quat.normalize(); 
 
                         match direction {
                             FacingDirection::Left => {
@@ -703,19 +722,30 @@ pub fn bullet_rollback_system(
 ) {
     for (entity, mut transform, mut bullet, bullet_state) in bullet_query.iter_mut() {
         // Move bullet based on velocity (fixed timestep)
-        let delta = bullet.velocity;
+        let delta = bullet.velocity; // Assume bullet.velocity is already deterministic for this frame
+
+        // Apply movement
         transform.translation.x += delta.x;
         transform.translation.y += delta.y;
-        
+        // If using Vec3 for translation, also: transform.translation.z += delta.z;
+
+        // --- CRITICAL: Round the translation after modification ---
+        transform.translation = round_vec3(transform.translation); // Or round_vec2 if it's Vec2 and then assign back to .truncate() if needed
+
         // Track distance traveled (fixed timestep version)
+        // delta.length() involves sqrt, which is an f32 operation.
+        // To be safe, round the result before adding, or round the total after.
+        // Rounding the total after is usually sufficient if delta is from clean sources.
         bullet.distance_traveled += delta.length();
-        
+        // --- CRITICAL: Round distance_traveled after modification ---
+        bullet.distance_traveled = round(bullet.distance_traveled);
+
         // Destroy bullet if it exceeds its range
-        if bullet.distance_traveled >= bullet.range {
+        // Ensure bullet.range is also a deterministically "clean" f32 value
+        // (e.g. set initially with a rounded value or from an integer).
+        if bullet.distance_traveled >= round(bullet.range) { // Compare rounded values or ensure range is clean
             commands.entity(entity).despawn();
         }
-
-        // Maybe also lifetime frame
     }
 }
 
@@ -741,88 +771,92 @@ fn apply_bullet_dommage(
     }
 }
 
-// Collision detection system (inside rollback)
+
 pub fn bullet_rollback_collision_system(
     mut commands: Commands,
     settings: Res<CollisionSettings>,
     bullet_query: Query<(Entity, &Transform, &Bullet, &Collider, &CollisionLayer), With<Rollback>>,
+    // Query for colliders, get mutable access later only when needed for a specific entity
     mut collider_query: Query<(Entity, &Transform, &Collider, &CollisionLayer, Option<&Wall>, Option<&Health>, Option<&mut DamageAccumulator>), (Without<Bullet>, With<Rollback>)>,
 ) {
-    // Track bullets to despawn after processing
-    let mut bullets_to_despawn = Vec::new();
-    
+    let mut bullets_to_despawn_set = HashSet::new(); // Use HashSet for efficient duplicate avoidance and checks
+
     for (bullet_entity, bullet_transform, bullet, bullet_collider, bullet_layer) in bullet_query.iter() {
-        // Skip already processed bullets
-        if bullets_to_despawn.contains(&bullet_entity) {
+        // Skip already processed bullets that are marked for despawn
+        if bullets_to_despawn_set.contains(&bullet_entity) {
             continue;
         }
-        
-        for (target_entity, target_transform, target_collider, target_layer, opt_wall, opt_health, opt_accumulator) in collider_query.iter_mut() {
-            // Check if these layers should collide
+
+        let mut actual_collisions = Vec::new();
+
+        // Phase 1: Identify all entities this bullet is colliding with
+        for (target_entity, target_transform, target_collider, target_layer, _opt_wall, _opt_health, _opt_accumulator) in collider_query.iter() { // Note: iter() not iter_mut() for the broad phase
             if !settings.layer_matrix[bullet_layer.0 as usize][target_layer.0 as usize] {
                 continue;
             }
-            
-            // Check for collision using our new helper function
-            if is_colliding(bullet_transform, bullet_collider, target_transform, target_collider) { 
+
+            if is_colliding(bullet_transform, bullet_collider, target_transform, target_collider) {
+                actual_collisions.push(target_entity); // Store only the entity ID for now
+            }
+        }
+
+        // Phase 2: Sort colliding entities by their Entity ID for deterministic processing
+        actual_collisions.sort_by_key(|e| e.index());
+
+        // Phase 3: Process sorted collisions
+        for &collided_target_entity in actual_collisions.iter() {
+            // Now, get mutable access to the components of the specific target entity
+            if let Ok((_, target_transform, _target_collider, _target_layer, opt_wall, opt_health, opt_accumulator_mut)) = collider_query.get_mut(collided_target_entity) {
+                
                 if opt_health.is_some() {
-                    apply_bullet_dommage(&mut commands, target_entity, bullet, opt_accumulator);
+                    // Apply damage (using the refactored logic from your apply_bullet_dommage function)
+                    if let Some(mut accumulator) = opt_accumulator_mut {
+                        // Update existing accumulator
+                        accumulator.total_damage += bullet.damage;
+                        accumulator.hit_count += 1;
+                        accumulator.last_hit_by = Some(health::HitBy::Player(bullet.player_handle));
+                    } else {
+                        // Insert new accumulator if it doesn't exist
+                        commands.entity(collided_target_entity).insert(DamageAccumulator {
+                            hit_count: 1,
+                            total_damage: bullet.damage,
+                            last_hit_by: Some(health::HitBy::Player(bullet.player_handle)),
+                        });
+                    }
                 }
 
+                let mut should_bullet_despawn_now = false;
                 match bullet.bullet_type {
                     BulletType::Standard { .. } => {
-                       
-                        // Standard bullets are destroyed on impact
-                        bullets_to_despawn.push(bullet_entity);
-                        break;
+                        should_bullet_despawn_now = true;
                     },
                     BulletType::Explosive { blast_radius, .. } => {
- 
-                        // Add explosion marker to bullet entity
-                        /*
-                        commands.entity(bullet_entity).insert(ExplosionMarker {
-                            radius: blast_radius,
-                            damage: bullet.damage,
-                            player_handle: bullet.player_handle,
-                            processed: false,
-                        });
-                        */
-                        
-                        // Explosive bullets are destroyed on impact
-                        bullets_to_despawn.push(bullet_entity);
-                        break;
+                        should_bullet_despawn_now = true;
                     },
                     BulletType::Piercing { .. } => {
-                        // Mark target as hit
-
                         if opt_wall.is_some() {
-                            bullets_to_despawn.push(bullet_entity);
-                            break;
+                            should_bullet_despawn_now = true;
                         }
-                        /*
-                        if let Some(counter) = penetration_counter {
-                            if counter.remaining <= 1 {
-                                bullets_to_despawn.insert(bullet_entity);
-                                break;
-                            }
-                            // Reduce counter in next system
-                        }*/
                     },
+                }
+
+                if should_bullet_despawn_now {
+                    bullets_to_despawn_set.insert(bullet_entity);
+                    break; // Bullet is destroyed, stop processing more targets for this bullet
                 }
             }
         }
     }
 
-    // Sort by entity ID for Deterministic delete ?????
-    bullets_to_despawn.sort_by_key(|entity| entity.index());
+    // Convert HashSet to Vec and sort by entity ID for deterministic despawning
+    let mut bullets_to_despawn_vec: Vec<Entity> = bullets_to_despawn_set.into_iter().collect();
+    bullets_to_despawn_vec.sort_by_key(|entity| entity.index());
     
     // Despawn bullets
-    for entity in bullets_to_despawn {
-        commands.entity(entity).despawn();
+    for entity in bullets_to_despawn_vec {
+        commands.entity(entity).despawn(); // Despawn if the entity still exists
     }
 }
-
-
 
 // Non rollback system to display the weapon correct sprite
 pub fn weapon_inventory_system(

@@ -3347,6 +3347,7 @@ dependencies = [
  "bevy_matchbox",
  "ggrs",
  "leafwing-input-manager",
+ "map",
  "once_cell",
  "pathfinding",
  "rand",
