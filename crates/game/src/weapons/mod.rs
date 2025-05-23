@@ -374,6 +374,7 @@ pub fn spawn_weapon_for_player(
 fn spawn_bullet_rollback(
     commands: &mut Commands,
     weapon: &Weapon,
+    player_transform: &fixed_math::FixedTransform3D,
     weapon_transform: &fixed_math::FixedTransform3D,
     facing_direction: &FacingDirection,
     direction: fixed_math::FixedVec2,
@@ -414,7 +415,7 @@ fn spawn_bullet_rollback(
     // And the local firing position as a FixedVec2:
     // let fixed_firing_position_v2_local = FixedVec2::from_f32(bevy_firing_position_v2.x, bevy_firing_position_v2.y);
     // Or directly:
-    let fixed_firing_position_v2_local = fixed_math::FixedVec2::new(fixed_math::Fixed::from_num(1.0), fixed_math::Fixed::from_num(0.5)); // Example
+    let fixed_firing_position_v2_local = player_transform.translation.truncate() + weapon_transform.translation.truncate(); //fixed_math::FixedVec2::new(fixed_math::Fixed::from_num(wea), fixed_math::Fixed::from_num(0.5)); // Example
 
     // 1. Extend local firing position_v2 to a 3D local offset:
     let fixed_local_offset_3d = fixed_math::FixedVec3 {
@@ -519,7 +520,7 @@ pub fn weapon_rollback_system(
     inputs: Res<PlayerInputs<PeerConfig>>,
     frame: Res<FrameCount>,
 
-    mut inventory_query: Query<(Entity, &mut WeaponInventory, &SprintState, &DashState, &CollisionLayer, &Player)>,
+    mut inventory_query: Query<(Entity, &mut WeaponInventory, &SprintState, &DashState, &CollisionLayer, &fixed_math::FixedTransform3D, &Player)>,
     mut weapon_query: Query<(&mut Weapon, &mut WeaponState, &mut WeaponModesState, &fixed_math::FixedTransform3D, &Parent)>,
 
     player_query: Query<(&fixed_math::FixedTransform3D, &FacingDirection, &Player)>,
@@ -527,7 +528,7 @@ pub fn weapon_rollback_system(
     collision_settings: Res<CollisionSettings>,
 ) {
     // Process weapon firing for all players
-    for (entity,  mut inventory, sprint_state, dash_state , collision_layer, player) in inventory_query.iter_mut() {
+    for (entity,  mut inventory, sprint_state, dash_state , collision_layer, transform, player) in inventory_query.iter_mut() {
         let (input, _input_status) = inputs[player.handle];
 
         // Do nothing if no weapons
@@ -678,6 +679,7 @@ pub fn weapon_rollback_system(
                                             spawn_bullet_rollback(
                                                 &mut commands,
                                                 &weapon,
+                                                transform,
                                                 weapon_transform,
                                                 facing_direction,
                                                 direction,
@@ -703,6 +705,7 @@ pub fn weapon_rollback_system(
                                         spawn_bullet_rollback(
                                             &mut commands,
                                             &weapon,
+                                            transform,
                                             weapon_transform,
                                             facing_direction,
                                             direction,

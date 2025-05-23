@@ -202,6 +202,10 @@ impl FixedVec3 {
             self.z.to_num::<f32>(),
         )
     }
+
+    pub fn truncate(&self) -> FixedVec2 {
+        FixedVec2 { x: self.x, y: self.y }
+    }
     
     pub fn dot(&self, other: &Self) -> Fixed {
         self.x.saturating_mul(other.x)
