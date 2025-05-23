@@ -43,7 +43,7 @@
 </script>
 
 
-<a href="https://github.com/bascanada/zombie-alacod/issues" target="_blank" class="card preset-filled-surface-100-900 border-[1px] border-surface-200-800 card-hover divide-surface-200-800 block max-w-md divide-y overflow-hidden">
+<a href="https://github.com/bascanada/alacod/issues" target="_blank" class="card preset-filled-surface-100-900 border-[1px] border-surface-200-800 card-hover divide-surface-200-800 block max-w-md divide-y overflow-hidden">
     <header>
         <h3 class="h3 m-5 text-left">Project Progress</h3>
     </header>

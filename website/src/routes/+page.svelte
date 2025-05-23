@@ -27,10 +27,10 @@
 			</div>
 
 			<div class="mb-6">
-				<h3 class="font-metal-mania text-xl font-semibold mb-2">Game: ZOMBIE ALACOD</h3>
+				<h3 class="font-metal-mania text-xl font-semibold mb-2">Game: 1837</h3>
 				<p class="mb-4">
-					The engine is develop alongside a clone of call of duty zombie
-					gameplay with random map.
+					The engine is develop alongside 1837 an apocalyptic rogue like survivor game set
+					during the revolt in lower canada.
 				</p>	
 			</div>
 
@@ -60,7 +60,7 @@
 			<a
 				target="_blank"
 				class="card flex justify-center preset-filled-surface-100-900 p-4 py-8 text-center hover:scale-105 transition-transform"
-				href="https://github.com/bascanada/zombie-alacod"
+				href="https://github.com/bascanada/alacod"
 			>
 				<SvgIcon color="var(--color-primary-500)" id="github" />
 			</a>

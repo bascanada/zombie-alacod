@@ -111,11 +111,11 @@ build_website: build_wasm_apps
 	cd website && npm ci && APP_VERSION=$(VERSION) npm run build
 
 build_docker_website: build_wasm_apps
-	docker build --build-arg APP_VERSION=$(VERSION) -f ./website/Dockerfile ./website -t ghcr.io/bascanada/zombie-alacod:latest
+	docker build --build-arg APP_VERSION=$(VERSION) -f ./website/Dockerfile ./website -t ghcr.io/bascanada/alacod:latest
 
 # Publish
 push_docker_website:
-	docker push ghcr.io/bascanada/zombie-alacod:latest
+	docker push ghcr.io/bascanada/alacod:latest
 
 
 print_version:
