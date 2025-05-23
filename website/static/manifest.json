@@ -1,6 +1,6 @@
 {
-    "name": "zombie alacod",
-    "short_name": "zombie alacod",
+    "name": "alacod",
+    "short_name": "alacod",
     "icons": [
         {
             "src": "/icons/android-chrome-192x192.png",
