@@ -2,6 +2,7 @@
 use animation::{create_child_sprite, AnimationBundle, SpriteSheetConfig};
 use bevy::{prelude::*};
 use bevy_kira_audio::prelude::*;
+use utils::math::round_vec3;
 
 use crate::{character::{config::CharacterConfigHandles, movement::Velocity}, collider::{Collider, ColliderShape, CollisionLayer, CollisionSettings}, global_asset::GlobalAsset, weapons::{spawn_weapon_for_player, FiringMode, Weapon, WeaponInventory, WeaponsConfig}};
 
@@ -41,7 +42,7 @@ pub fn create_character(
     let collider: Collider = (&config.collider).into();
     let health: Health = config.base_health.clone().into();
     let mut entity = commands.spawn((
-        Transform::from_scale(Vec3::splat(config.scale)).with_translation(translation),
+        Transform::from_scale(Vec3::splat(config.scale)).with_translation(round_vec3(translation)),
         Visibility::default(),
         SpatialAudioEmitter {instances: vec![]},
         Velocity(Vec2::ZERO),

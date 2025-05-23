@@ -39,26 +39,20 @@ pub fn calculate_time_remaining_seconds(ending_frame_number: u32, current_frame:
 }
 
 
-pub fn round(n: f32) -> f32 {
-    (n * 1000.0).round() / 1000.0
+const FLOAT_ROUNDING_FACTOR: f32 = 1000.0; // Or 10000.0 for more precision if needed
+
+pub fn round(val: f32) -> f32 {
+    (val * FLOAT_ROUNDING_FACTOR).round() / FLOAT_ROUNDING_FACTOR
 }
 
 pub fn round_vec2(v: Vec2) -> Vec2 {
-    Vec2::new(
-        (v.x * 1000.0).round() / 1000.0, 
-        (v.y * 1000.0).round() / 1000.0
-    )
+    Vec2::new(round(v.x), round(v.y))
 }
 
+// If you use Vec3 for translation:
 pub fn round_vec3(v: Vec3) -> Vec3 {
-    Vec3::new(
-        (v.x * 1000.0).round() / 1000.0, 
-        (v.y * 1000.0).round() / 1000.0,
-        (v.z * 1000.0).round() / 1000.0,
-    )
+    Vec3::new(round(v.x), round(v.y), round(v.z))
 }
-
-
 
 
 #[cfg(test)]

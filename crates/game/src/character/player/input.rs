@@ -6,7 +6,8 @@ use bevy::{prelude::*, time::Time, utils::HashMap};
 use leafwing_input_manager::prelude::*;
 use bevy_ggrs::prelude::*;
 use bevy_ggrs::LocalInputs;
-use serde::{Serialize, Deserialize}; 
+use serde::{Serialize, Deserialize};
+use utils::math::round_vec3; 
 
 use crate::character::config::{CharacterConfig, CharacterConfigHandles};
 use crate::character::dash::DashState;
@@ -270,6 +271,7 @@ pub fn move_characters(
         let mut new_transform = transform.clone();
         new_transform.translation.x += velocity.x * FIXED_TIMESTEP;
         new_transform.translation.y += velocity.y * FIXED_TIMESTEP;
+        new_transform.translation = round_vec3(new_transform.translation);
 
         for (target_entity, target_transform, target_collider, target_layer) in collider_query.iter() {
             if !settings.layer_matrix[collision_layer.0 as usize][target_layer.0 as usize] {
