@@ -6,7 +6,8 @@ use bevy::{prelude::*, time::Time, utils::HashMap};
 use leafwing_input_manager::prelude::*;
 use bevy_ggrs::prelude::*;
 use bevy_ggrs::LocalInputs;
-use serde::{Serialize, Deserialize}; 
+use serde::{Serialize, Deserialize};
+use utils::fixed_math; 
 
 use crate::character::config::{CharacterConfig, CharacterConfigHandles};
 use crate::character::dash::DashState;
@@ -151,7 +152,7 @@ pub fn apply_inputs(
     mut commands: Commands,
     inputs: Res<PlayerInputs<PeerConfig>>,
     character_configs: Res<Assets<CharacterConfig>>,
-    mut query: Query<(Entity, &WeaponInventory, &mut Transform, &mut DashState, &mut Velocity, &mut ActiveLayers, &mut FacingDirection, &mut CursorPosition, &mut SprintState, &CharacterConfigHandles, &Player), With<Rollback>>,
+    mut query: Query<(Entity, &WeaponInventory, &mut fixed_math::FixedTransform3D, &mut DashState, &mut Velocity, &mut ActiveLayers, &mut FacingDirection, &mut CursorPosition, &mut SprintState, &CharacterConfigHandles, &Player), With<Rollback>>,
 ) {
     for (entity, inventory, mut transform, mut dash_state, mut velocity, mut active_layers, mut facing_direction, mut cursor_position, mut sprint_state, config_handles, player) in query.iter_mut() {
         if let Some(config) = character_configs.get(&config_handles.config) {
@@ -162,21 +163,21 @@ pub fn apply_inputs(
             // If currently dashing, directly update position
             if dash_state.is_dashing {
                 // Calculate position based on remaining frames and distance
-                let completed_fraction = 1.0 - (dash_state.dash_frames_remaining as f32 / 
-                                              (config.movement.dash_duration_frames as f32));
+                let completed_fraction = 1.0 - (fixed_math::new(dash_state.dash_frames_remaining as f32) / 
+                                              fixed_math::new((config.movement.dash_duration_frames as f32)));
                 
                 let dash_offset = dash_state.dash_direction * dash_state.dash_total_distance * completed_fraction;
-                transform.translation = dash_state.dash_start_position + Vec3::new(dash_offset.x, dash_offset.y, 0.0);
+                transform.translation = dash_state.dash_start_position + fixed_math::FixedVec3::new(dash_offset.x, dash_offset.y, fixed_math::new(0.0));
                 
                 // Zero out velocity while dashing to prevent normal movement physics
-                velocity.0 = Vec2::ZERO;
+                velocity.0 = fixed_math::FixedVec2::ZERO;
                 continue;
             }
             
             // Check if player is trying to dash
             if (input.buttons & INPUT_DASH != 0) && dash_state.can_dash() {
                 // Get looking direction for dash
-                let look_direction = Vec2::new(input.pan_x as f32, input.pan_y as f32);
+                let look_direction = fixed_math::FixedVec2::new(fixed_math::new(input.pan_x as f32), fixed_math::new(input.pan_y as f32));
 
                 let is_reverse_dash = (input.buttons & INPUT_MODIFIER) != 0;
                 
@@ -184,7 +185,7 @@ pub fn apply_inputs(
                 let mut dash_direction = if look_direction.length_squared() > 1.0 {
                     look_direction.normalize()
                 } else {
-                    Vec2::new(facing_direction.to_int() as f32, 0.0)
+                    fixed_math::FixedVec2::new(fixed_math::new(facing_direction.to_int() as f32), fixed_math::new(0.0))
                 };
 
                 if is_reverse_dash {
@@ -201,7 +202,7 @@ pub fn apply_inputs(
                 dash_state.set_cooldown(config.movement.dash_cooldown_frames);
                 
                 // Zero out velocity to prevent normal movement physics
-                velocity.0 = Vec2::ZERO;
+                velocity.0 = fixed_math::FixedVec2::ZERO;
                 continue;
             }
 
@@ -210,24 +211,24 @@ pub fn apply_inputs(
             
             if is_sprinting {
                 sprint_state.sprint_factor += config.movement.sprint_acceleration_per_frame;
-                sprint_state.sprint_factor = sprint_state.sprint_factor.min(1.0);
+                sprint_state.sprint_factor = sprint_state.sprint_factor.min(fixed_math::FIXED_ZERO);
             } else {
                 sprint_state.sprint_factor -= config.movement.sprint_deceleration_per_frame;
-                sprint_state.sprint_factor = sprint_state.sprint_factor.max(0.0);
+                sprint_state.sprint_factor = sprint_state.sprint_factor.max(fixed_math::FIXED_ZERO);
             }
 
-            let mut direction = Vec2::ZERO;
-            if input.buttons & INPUT_UP != 0    { direction.y += 1.0; }
-            if input.buttons & INPUT_DOWN != 0  { direction.y -= 1.0; }
-            if input.buttons & INPUT_LEFT != 0  { direction.x -= 1.0; }
-            if input.buttons & INPUT_RIGHT != 0 { direction.x += 1.0; }
+            let mut direction = fixed_math::FixedVec2::ZERO;
+            if input.buttons & INPUT_UP != 0    { direction.y += fixed_math::FIXED_ONE; }
+            if input.buttons & INPUT_DOWN != 0  { direction.y -= fixed_math::FIXED_ONE; }
+            if input.buttons & INPUT_LEFT != 0  { direction.x -= fixed_math::FIXED_ONE; }
+            if input.buttons & INPUT_RIGHT != 0 { direction.x += fixed_math::FIXED_ONE; }
 
             *facing_direction = get_facing_direction(&input);
 
             cursor_position.x = input.pan_x as i32;
             cursor_position.y = input.pan_y as i32;
 
-            if direction != Vec2::ZERO {
+            if direction != fixed_math::FixedVec2::ZERO {
                 let sprint_multiplier = 1.0 + (config.movement.sprint_multiplier - 1.0) * sprint_state.sprint_factor;
                 // Using FIXED_TIMESTEP instead of time.delta()
                 let move_delta = direction.normalize() * config.movement.acceleration * sprint_multiplier * FIXED_TIMESTEP;
@@ -254,7 +255,7 @@ pub fn apply_friction(
             if !moving && velocity.length_squared() > 0.1 {
                 velocity.0 *= (1.0 - config.movement.friction * FIXED_TIMESTEP).max(0.0);
                 if velocity.length_squared() < 1.0 {
-                    velocity.0 = Vec2::ZERO;
+                    velocity.0 = fixed_math::FixedVec2::ZERO;
                 }
             }
         }
@@ -262,7 +263,7 @@ pub fn apply_friction(
 }
 
 pub fn move_characters(
-    mut query: Query<(&mut Transform, &mut Velocity, &Collider, &CollisionLayer), (With<Rollback>, With<Player>)>,
+    mut query: Query<(&mut fixed_math::FixedTransform3D, &mut Velocity, &Collider, &CollisionLayer), (With<Rollback>, With<Player>)>,
     settings: Res<CollisionSettings>,
     collider_query: Query<(Entity, &Transform, &Collider, &CollisionLayer), (With<Wall>, Without<Player>)>,
 ) {

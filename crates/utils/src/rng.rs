@@ -1,11 +1,14 @@
 use bevy::ecs::system::Resource;
 
+use crate::fixed_math;
+
 
 
 #[derive(Debug, Resource, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RollbackRng {
     pub seed: u32,
 }
+
 
 impl RollbackRng {
     // Constants for the LCG algorithm. These are common choices.
@@ -28,18 +31,34 @@ impl RollbackRng {
         self.seed
     }
 
-    /// Generates a random f32 value between 0.0 (inclusive) and 1.0 (exclusive).
-    pub fn next_f32(&mut self) -> f32 {
-        // Convert the u32 to f32 in the range [0,1)
-        // We divide by 2^32.
-        // U32_MAX is 2^32 - 1. To get a value strictly less than 1.0,
-        // we can use the formula: random_u32 / (U32_MAX + 1.0), which is random_u32 / 2^32.
-        self.next_u32() as f32 / 4294967296.0 // 2.0f32.powi(32)
+    /// Generates a random Fixed value between 0 (inclusive) and 1 (exclusive).
+    /// The type Fixed is assumed to be FixedI32<U16>.
+    pub fn next_fixed(&mut self) -> fixed_math::Fixed {
+        // Get a raw u32 random number.
+        let random_u32 = self.next_u32();
+
+        // To map a u32 value (0 to 2^32-1) to a FixedI32<U16> value in [0, 1):
+        // A FixedI32<U16> has 16 fractional bits.
+        // The desired value is conceptually (random_u32 / 2^32).
+        // To get the raw bits for FixedI32<U16>, we scale this by 2^16:
+        // (random_u32 / 2^32) * 2^16 = random_u32 / 2^(32-16) = random_u32 >> 16.
+        // The result of `random_u32 >> 16` is a 16-bit integer.
+        // `Fixed::from_bits` interprets this integer as the raw representation
+        // of the fixed-point number. Since random_u32 is non-negative,
+        // the cast to i32 is safe and represents values from 0 up to (2^16-1)/2^16.
+        fixed_math::Fixed::from_bits((random_u32 >> 16) as i32)
     }
 
-    /// Generates a random f32 value between -1.0 (inclusive) and 1.0 (exclusive).
-    pub fn next_f32_symmetric(&mut self) -> f32 {
-        (self.next_f32() * 2.0) - 1.0
+    /// Generates a random Fixed value between -1 (inclusive) and 1 (exclusive).
+    /// The type Fixed is assumed to be FixedI32<U16>.
+    pub fn next_fixed_symmetric(&mut self) -> fixed_math::Fixed {
+        // Generate a random number in [0, 1)
+        let val_0_to_1 = self.next_fixed();
+
+        // Transform to [-1, 1): (val * 2) - 1
+        // Fixed::from_num(2) creates the fixed-point representation of 2.
+        // Fixed::from_num(1) creates the fixed-point representation of 1.
+        (val_0_to_1 * fixed_math::Fixed::from_num(2)) - fixed_math::Fixed::from_num(1)
     }
 }
 
