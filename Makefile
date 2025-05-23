@@ -70,13 +70,7 @@ dep_web:
 	rustup target add wasm32-unknown-unknown
 	cargo install wasm-bindgen-cli
 
-dep_hosting:
-	npm install -g live-server
-
-dep_matchbox:
-	cargo install matchbox_server
-
-dep: dep_web dep_hosting dep_matchbox
+dep: dep_web
 
 # Dev run
 
@@ -96,18 +90,12 @@ character_tester:
 character_tester_matchbox:
 	APP_VERSION=$(VERSION) cargo run --example character_tester $(ARGS) --features native -- --number-player $(NUMBER_PLAYER) --matchbox "wss://matchbox.bascanada.org" --lobby test_2 --players localhost remote
 
-matchbox_server:
-	APP_VERSION=$(VERSION) cargo run -p matchbox_server
-
 host_website:
 	cd website && APP_VERSION=$(VERSION) npm run dev
 
 cp_asset:
 	mkdir -p ./website/static/$(VERSION)/assets/
 	cp -r ./assets/* ./website/static/$(VERSION)/assets/
-
-build_docker_matchbox_server:
-	docker build -f ./crates/matchbox_server/Dockerfile ./crates/matchbox_server/ -t ghcr.io/bascanada/matchbox_server:latest
 
 build_map_preview_web:
 	APP_VERSION=$(VERSION) cargo build --example map_preview --target wasm32-unknown-unknown --features bevy_ecs_tilemap/atlas $(RELEASE)
@@ -126,9 +114,6 @@ build_docker_website: build_wasm_apps
 	docker build --build-arg APP_VERSION=$(VERSION) -f ./website/Dockerfile ./website -t ghcr.io/bascanada/zombie-alacod:latest
 
 # Publish
-push_docker_matchbox_server:
-	docker push ghcr.io/bascanada/matchbox_server:latest
-
 push_docker_website:
 	docker push ghcr.io/bascanada/zombie-alacod:latest
 
