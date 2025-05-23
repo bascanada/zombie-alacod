@@ -463,10 +463,29 @@ pub fn system_weapon_position(
                 for child in childs.iter() {
                     if let Ok((mut sprite)) = query_sprite.get_mut(*child) {
 
-                        let vec = Vec2::new(cursor_position.x as f32, cursor_position.y as f32);
+                        let vec = Vec2::new(cursor_position.x as f32, cursor_position.y as f32); // Ensure cursor_position fields are clean if f32
                         let angle_radians = vec.y.atan2(vec.x);
-                        
-                        transform.rotation = Quat::from_rotation_z(angle_radians);
+                        // Optional: You can round angle_radians here if it's used for other deterministic logic like deriving FacingDirection
+                        // let clean_angle_for_logic = round_f32(angle_radians);
+
+                        let unrounded_quat = Quat::from_rotation_z(angle_radians); // Or use clean_angle_for_logic
+
+                        // Round each component of the quaternion
+                        let rounded_quat = Quat::from_xyzw(
+                            round(unrounded_quat.x),
+                            round(unrounded_quat.y),
+                            round(unrounded_quat.z),
+                            round(unrounded_quat.w),
+                        );
+
+                        // IMPORTANT: A quaternion representing a rotation must be a unit quaternion (length 1).
+                        // Rounding its components can make it slightly non-unit. So, normalize it.
+                        // However, .normalize() itself uses f32 math (sqrt).
+                        // If the rounded_quat components are "clean" (e.g., only have 3 decimal places),
+                        // the result of .normalize() is *more likely* to be deterministic, but it's a complex spot.
+                        // For perfect determinism, you'd ideally want a "deterministic normalize" or ensure
+                        // the rounding factor is chosen such that normalization is stable.
+                        transform.rotation = rounded_quat.normalize(); 
 
                         match direction {
                             FacingDirection::Left => {
