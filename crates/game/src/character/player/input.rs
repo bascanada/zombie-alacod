@@ -163,7 +163,7 @@ pub fn apply_inputs(
             // If currently dashing, directly update position
             if dash_state.is_dashing {
                 // Calculate position based on remaining frames and distance
-                let completed_fraction = 1.0 - (fixed_math::new(dash_state.dash_frames_remaining as f32) / 
+                let completed_fraction = fixed_math::FIXED_ONE - (fixed_math::new(dash_state.dash_frames_remaining as f32) / 
                                               fixed_math::new((config.movement.dash_duration_frames as f32)));
                 
                 let dash_offset = dash_state.dash_direction * dash_state.dash_total_distance * completed_fraction;
@@ -229,9 +229,9 @@ pub fn apply_inputs(
             cursor_position.y = input.pan_y as i32;
 
             if direction != fixed_math::FixedVec2::ZERO {
-                let sprint_multiplier = 1.0 + (config.movement.sprint_multiplier - 1.0) * sprint_state.sprint_factor;
+                let sprint_multiplier = fixed_math::FIXED_ONE + (config.movement.sprint_multiplier - fixed_math::FIXED_ONE) * sprint_state.sprint_factor;
                 // Using FIXED_TIMESTEP instead of time.delta()
-                let move_delta = direction.normalize() * config.movement.acceleration * sprint_multiplier * FIXED_TIMESTEP;
+                let move_delta = direction.normalize() * config.movement.acceleration * sprint_multiplier * fixed_math::new(FIXED_TIMESTEP);
                 velocity.0 += move_delta;
                 
                 let max_speed = config.movement.max_speed * sprint_multiplier;
@@ -253,7 +253,7 @@ pub fn apply_friction(
             let moving = input.buttons & INPUT_RIGHT != 0 || input.buttons & INPUT_LEFT != 0 || input.buttons & INPUT_UP != 0 || input.buttons & INPUT_DOWN != 0;
 
             if !moving && velocity.length_squared() > 0.1 {
-                velocity.0 *= (1.0 - config.movement.friction * FIXED_TIMESTEP).max(0.0);
+                velocity.0 = velocity.0 * (fixed_math::FIXED_ONE - config.movement.friction * fixed_math::new(FIXED_TIMESTEP)).max(fixed_math::FIXED_ZERO);
                 if velocity.length_squared() < 1.0 {
                     velocity.0 = fixed_math::FixedVec2::ZERO;
                 }
@@ -265,19 +265,19 @@ pub fn apply_friction(
 pub fn move_characters(
     mut query: Query<(&mut fixed_math::FixedTransform3D, &mut Velocity, &Collider, &CollisionLayer), (With<Rollback>, With<Player>)>,
     settings: Res<CollisionSettings>,
-    collider_query: Query<(Entity, &Transform, &Collider, &CollisionLayer), (With<Wall>, Without<Player>)>,
+    collider_query: Query<(Entity, &fixed_math::FixedTransform3D, &Collider, &CollisionLayer), (With<Wall>, Without<Player>)>,
 ) {
     'mainloop: for (mut transform, mut velocity, player_collider, collision_layer) in query.iter_mut() {
         let mut new_transform = transform.clone();
-        new_transform.translation.x += velocity.x * FIXED_TIMESTEP;
-        new_transform.translation.y += velocity.y * FIXED_TIMESTEP;
+        new_transform.translation.x += velocity.x * fixed_math::new(FIXED_TIMESTEP);
+        new_transform.translation.y += velocity.y * fixed_math::new(FIXED_TIMESTEP);
 
         for (target_entity, target_transform, target_collider, target_layer) in collider_query.iter() {
             if !settings.layer_matrix[collision_layer.0 as usize][target_layer.0 as usize] {
                 continue;
             }
-            if is_colliding(&new_transform, player_collider, target_transform, target_collider) {
-                velocity.0 = Vec2::ZERO;
+            if is_colliding(&new_transform.translation, player_collider, &target_transform.translation, target_collider) {
+                velocity.0 = fixed_math::FixedVec2::ZERO;
                 continue 'mainloop;
             }
         }

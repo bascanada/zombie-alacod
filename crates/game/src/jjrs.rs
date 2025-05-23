@@ -7,7 +7,7 @@ use bevy_matchbox::{prelude::PeerState, MatchboxSocket};
 use ggrs::UdpNonBlockingSocket;
 use utils::rng::RollbackRng;
 
-use crate::{character::{config::CharacterConfig, enemy::create::spawn_enemy, player::{create::create_player, jjrs::PeerConfig}}, collider::{spawn_test_wall, CollisionSettings}, global_asset::GlobalAsset, plugins::AppState, weapons::{WeaponAsset, WeaponsConfig}};
+use crate::{character::{config::CharacterConfig, player::{create::create_player, jjrs::PeerConfig}}, collider::{spawn_test_wall, CollisionSettings}, global_asset::GlobalAsset, plugins::AppState, weapons::{WeaponAsset, WeaponsConfig}};
 
 pub struct GggrsConnectionConfiguration {
     pub max_player: usize,

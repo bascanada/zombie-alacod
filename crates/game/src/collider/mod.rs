@@ -171,9 +171,13 @@ pub fn spawn_test_wall(
     collision_settings: &Res<CollisionSettings>,
     color: Color,
 ) {
+    let translation = fixed_math::FixedVec3::new(fixed_math::new(position.x), fixed_math::new(position.y), fixed_math::new(position.z));
+    let transform = fixed_math::FixedTransform3D::new(translation, fixed_math::FixedMat3::IDENTITY, fixed_math::FixedVec3::ONE);
+
     commands.spawn((
         Wall,
-        Transform::from_translation(position),
+        transform.to_bevy_transform(),
+        transform,
         Sprite {
             color,
             custom_size: Some(size),

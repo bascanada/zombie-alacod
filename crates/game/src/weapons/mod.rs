@@ -503,7 +503,7 @@ pub fn system_weapon_position(
         for child in childs.iter() {
             if let Ok(mut transform) = query_weapon.get_mut(*child) {
                 let cursor_game_world_pos = fixed_math::FixedVec3::new(fixed_math::new(cursor_position.x as f32), fixed_math::new(cursor_position.y as f32), fixed_math::new(0.0));
-                let direction_to_target_fixed = cursor_game_world_pos - transform.translation;
+                let direction_to_target_fixed = (cursor_game_world_pos - transform.translation).normalize();
                 let angle_radians_fixed = fixed_math::atan2_fixed(direction_to_target_fixed.y, direction_to_target_fixed.x);
                         
                 transform.rotation = fixed_math::FixedMat3::from_rotation_z(angle_radians_fixed);
