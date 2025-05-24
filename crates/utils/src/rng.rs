@@ -60,6 +60,59 @@ impl RollbackRng {
         // Fixed::from_num(1) creates the fixed-point representation of 1.
         (val_0_to_1 * fixed_math::Fixed::from_num(2)) - fixed_math::Fixed::from_num(1)
     }
+
+    /// Generates a random u32 value in the range [min, max).
+    /// Note: max is exclusive, min is inclusive.
+    pub fn next_u32_range(&mut self, min: u32, max: u32) -> u32 {
+        debug_assert!(min < max, "min must be less than max");
+        
+        let range = max - min;
+        if range == 0 {
+            return min;
+        }
+        
+        // Simple modulo approach
+        min + (self.next_u32() % range)
+    }
+
+    /// Generates a random u32 value in the range [min, max] (both inclusive).
+    pub fn next_u32_range_inclusive(&mut self, min: u32, max: u32) -> u32 {
+        debug_assert!(min <= max, "min must be less than or equal to max");
+        
+        if min == max {
+            return min;
+        }
+        
+        // Add 1 to make max inclusive
+        let range = max - min + 1;
+        min + (self.next_u32() % range)
+    }
+
+    pub fn next_i32_range(&mut self, min: i32, max: i32) -> i32 {
+        debug_assert!(min < max, "min must be less than max");
+        
+        // Calculate range as u64 to avoid overflow
+        let range = (max as i64 - min as i64) as u64;
+        if range == 0 {
+            return min;
+        }
+        
+        // Use modulo to get value in range, then add to min
+        min + (self.next_u32() as u64 % range) as i32
+    }
+
+    /// Generates a random i32 value in the range [min, max] (both inclusive).
+    pub fn next_i32_range_inclusive(&mut self, min: i32, max: i32) -> i32 {
+        debug_assert!(min <= max, "min must be less than or equal to max");
+        
+        if min == max {
+            return min;
+        }
+        
+        // Calculate range as u64 to avoid overflow, add 1 for inclusive
+        let range = (max as i64 - min as i64 + 1) as u64;
+        min + (self.next_u32() as u64 % range) as i32
+    }
 }
 
 #[cfg(test)]
