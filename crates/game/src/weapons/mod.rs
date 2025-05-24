@@ -403,54 +403,44 @@ fn spawn_bullet_rollback(
         BulletType::Piercing { .. } => Color::BLACK,
     };
 
-    let firing_position_v2 = if matches!(facing_direction, FacingDirection::Right) {
+     let local_muzzle_offset_v2 = if matches!(facing_direction, FacingDirection::Right) {
         weapon.sprite_config.bullet_offset_right
     } else {
         weapon.sprite_config.bullet_offset_left
     };
 
-    let fixed_weapon_translation: fixed_math::FixedVec3 = weapon_transform.translation;
-    let fixed_weapon_rotation_mat3: fixed_math::FixedMat3 = weapon_transform.rotation.clone();
-    // And the local firing position as a FixedVec2:
-    // let fixed_firing_position_v2_local = FixedVec2::from_f32(bevy_firing_position_v2.x, bevy_firing_position_v2.y);
-    // Or directly:
-    let fixed_firing_position_v2_local = player_transform.translation.truncate() + weapon_transform.translation.truncate() + firing_position_v2;
-
-    // 1. Extend local firing position_v2 to a 3D local offset:
-    let fixed_local_offset_3d = fixed_math::FixedVec3 {
-        x: fixed_firing_position_v2_local.x,
-        y: fixed_firing_position_v2_local.y,
-        z: fixed_math::Fixed::ZERO, // Or whatever fixed-point representation of 0.0 you use
+    // 1. Muzzle offset in weapon's local 3D space
+    let local_muzzle_offset_v3 = fixed_math::FixedVec3 {
+        x: local_muzzle_offset_v2.x,
+        y: local_muzzle_offset_v2.y,
+        z: fixed_math::Fixed::ZERO,
     };
 
-    // 2. Calculate world firing position (equivalent to transform_point):
-    // world_point = (rotation * local_point) + translation
-    let rotated_offset_fixed = fixed_weapon_rotation_mat3.mul_vec3(fixed_local_offset_3d);
+    println!("muzzle offset {:?}", local_muzzle_offset_v3);
 
-    // Ensure FixedVec3 has operator overloading for addition
-    // If FixedVec3 doesn't have `+` overloaded, you'd do:
-    // let world_firing_position_fixed = FixedVec3 {
-    //     x: rotated_offset_fixed.x.saturating_add(fixed_weapon_translation.x),
-    //     y: rotated_offset_fixed.y.saturating_add(fixed_weapon_translation.y),
-    //     z: rotated_offset_fixed.z.saturating_add(fixed_weapon_translation.z),
-    // };
-    // Assuming it does (based on FixedVec2):
-    let world_firing_position_fixed = rotated_offset_fixed + fixed_weapon_translation;
-    // `world_firing_position_fixed` is your fixed-point equivalent of `firing_position`
+    // 2. Transform muzzle offset by weapon's local rotation (relative to player)
+    //    and add weapon's local translation (relative to player)
+    //    to get muzzle position in player's local coordinate system.
+    let weapon_local_rotation_mat3: fixed_math::FixedMat3 = weapon_transform.rotation.clone();
+    let weapon_local_translation_v3: fixed_math::FixedVec3 = weapon_transform.translation;
 
+    let muzzle_pos_in_player_space = weapon_local_rotation_mat3.mul_vec3(local_muzzle_offset_v3) + weapon_local_translation_v3;
 
-    // 3. Get weapon's world rotation:
-    // This is already `fixed_weapon_rotation_mat3`.
-    // Bevy's `weapon_world_rotation` is a Quat. `fixed_weapon_rotation_mat3` is its matrix form.
-    let projectile_rotation_fixed_mat3 = fixed_weapon_rotation_mat3;
+    // 3. Transform muzzle position from player's local space to world space.
+    let player_world_rotation_mat3: fixed_math::FixedMat3 = player_transform.rotation.clone();
+    let player_world_translation_v3: fixed_math::FixedVec3 = player_transform.translation;
 
+    let world_firing_position = player_world_rotation_mat3.mul_vec3(muzzle_pos_in_player_space) + player_world_translation_v3;
 
-    // 4. Create a new "transform" concept for the projectile using these fixed-point values.
-    // If you're using the FixedTransform3D struct:
+    // 4. Calculate projectile's world rotation.
+    // This is player's world rotation combined with weapon's local rotation.
+    let projectile_world_rotation = player_world_rotation_mat3.mul_mat3(&weapon_local_rotation_mat3); // Ensure mul_mat3 is the correct operation
+
+    // 5. Create the projectile's transform.
     let new_projectile_fixed_transform = fixed_math::FixedTransform3D::new(
-        world_firing_position_fixed,
-        projectile_rotation_fixed_mat3,
-        fixed_math::FixedVec3::ONE, 
+        world_firing_position,
+        projectile_world_rotation,
+        fixed_math::FixedVec3::ONE,
     );
 
 
@@ -467,7 +457,7 @@ fn spawn_bullet_rollback(
         },
         BulletRollbackState {
             spawn_frame: current_frame,
-            initial_position: firing_position_v2,
+            initial_position: new_projectile_fixed_transform.translation.truncate(),
             direction,
         },
         Collider {

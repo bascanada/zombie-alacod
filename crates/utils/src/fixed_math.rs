@@ -81,6 +81,10 @@ impl FixedVec2 {
     pub fn distance(&self, other: &Self) -> Fixed {
         (*self - *other).length()
     }
+
+    pub fn extend(&self) -> FixedVec3 {
+        FixedVec3 { x: self.x, y: self.y, z: FIXED_ZERO }
+    }
     
     pub fn normalize(&self) -> Self {
         let len = self.length();
@@ -524,6 +528,21 @@ impl FixedMat3 {
             x_axis: FixedVec3::new(c, s, Fixed::ZERO),
             y_axis: FixedVec3::new(-s, c, Fixed::ZERO), // -s uses std::ops::Neg for Fixed
             z_axis: FixedVec3::new(Fixed::ZERO, Fixed::ZERO, FIXED_ONE), // Assumes FIXED_ONE is your 1.0 Fixed value
+        }
+    }
+
+    // Multiply this matrix by another FixedMat3 (self * other)
+    pub fn mul_mat3(&self, other: &FixedMat3) -> Self {
+        // Each column of the new matrix is self (this matrix) multiplied
+        // by the corresponding column-vector of the 'other' matrix.
+        let new_x_axis = self.mul_vec3(other.x_axis.clone()); // Or pass by reference if mul_vec3 accepts it
+        let new_y_axis = self.mul_vec3(other.y_axis.clone());
+        let new_z_axis = self.mul_vec3(other.z_axis.clone());
+
+        Self {
+            x_axis: new_x_axis,
+            y_axis: new_y_axis,
+            z_axis: new_z_axis,
         }
     }
 }

@@ -292,3 +292,9 @@ pub fn update_animation_state(mut query: Query<(&Velocity, &mut AnimationState),
         if current_state_name != new_state_name { state.0 = new_state_name.to_string(); }
     }
 }
+
+pub fn update_sprite_direction(
+
+) {
+    
+}

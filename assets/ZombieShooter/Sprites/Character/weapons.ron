@@ -25,7 +25,7 @@
         sprite_config: (
             name: "pistol",
             index: 3,
-            bullet_offset_right: ( x: "0.0", y: "2.0" ),
+            bullet_offset_right: ( x: "-15.0", y: "2.0" ),
             bullet_offset_left: ( x: "0.0", y: "-2.0" ),
             weapon_offset: ( x: "0.0", y: "-5.0" )
         ),
@@ -80,8 +80,8 @@
         sprite_config: (
             name: "machine_gun",
             index: 1,
-            bullet_offset_right: ( x: "17.0", y: "2.0" ),
-            bullet_offset_left: ( x: "17.0", y: "-2.0" ),
+            bullet_offset_right: ( x: "100.0", y: "-5.0" ),
+            bullet_offset_left: ( x: "100.0", y: "-0.0" ),
             weapon_offset: ( x: "0.0", y: "-5.0" )
         ),
         audio_config: (
@@ -142,8 +142,8 @@
         sprite_config: (
             name: "shotgun",
             index: 0,
-            bullet_offset_right: ( x: "18.0", y: "1.5" ),
-            bullet_offset_left: ( x: "18.0", y: "-1.5" ),
+            bullet_offset_right: ( x: "100.0", y: "-12" ),
+            bullet_offset_left: ( x: "100.0", y: "-5.5" ),
             weapon_offset: ( x: "0.0", y: "-5." )
         ),
         audio_config: (
