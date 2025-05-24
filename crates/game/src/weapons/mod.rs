@@ -414,7 +414,7 @@ fn spawn_bullet_rollback(
     // And the local firing position as a FixedVec2:
     // let fixed_firing_position_v2_local = FixedVec2::from_f32(bevy_firing_position_v2.x, bevy_firing_position_v2.y);
     // Or directly:
-    let fixed_firing_position_v2_local = player_transform.translation.truncate() + weapon_transform.translation.truncate(); //fixed_math::FixedVec2::new(fixed_math::Fixed::from_num(wea), fixed_math::Fixed::from_num(0.5)); // Example
+    let fixed_firing_position_v2_local = player_transform.translation.truncate() + weapon_transform.translation.truncate() + firing_position_v2;
 
     // 1. Extend local firing position_v2 to a 3D local offset:
     let fixed_local_offset_3d = fixed_math::FixedVec3 {
