@@ -143,7 +143,7 @@
             name: "shotgun",
             index: 0,
             bullet_offset_right: ( x: "100.0", y: "-12" ),
-            bullet_offset_left: ( x: "100.0", y: "-5.5" ),
+            bullet_offset_left: ( x: "100.0", y: "12" ),
             weapon_offset: ( x: "0.0", y: "-5." )
         ),
         audio_config: (

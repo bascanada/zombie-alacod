@@ -15,7 +15,7 @@ use crate::character::movement::{MovementConfig, SprintState, Velocity};
 use crate::character::player::{control::PlayerAction, Player};
 use crate::collider::{is_colliding, Collider, CollisionLayer, CollisionSettings, Wall};
 use crate::frame::FrameCount;
-use crate::weapons::WeaponInventory;
+use crate::weapons::{ActiveWeapon, WeaponInventory};
 
 use super::jjrs::PeerConfig;
 use super::LocalPlayer;
@@ -291,10 +291,4 @@ pub fn update_animation_state(mut query: Query<(&Velocity, &mut AnimationState),
         let new_state_name = if velocity.length_squared() > 0.5 { "Run" } else { "Idle" };
         if current_state_name != new_state_name { state.0 = new_state_name.to_string(); }
     }
-}
-
-pub fn update_sprite_direction(
-
-) {
-    
 }

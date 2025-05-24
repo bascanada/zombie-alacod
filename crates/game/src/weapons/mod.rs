@@ -880,6 +880,36 @@ pub fn weapon_inventory_system(
     }
 }
 
+
+
+pub fn update_weapon_sprite_direction(
+    mut query_sprite: Query<(&mut Sprite)>,
+    query_players: Query<(&Children, &FacingDirection)>,
+    query_weapons: Query<(&Children), With<ActiveWeapon>>
+) {
+
+    for (childs,  direction) in query_players.iter() {
+        for child in childs.iter() {
+            if let Ok(childs) = query_weapons.get(*child) {
+                for child in childs.iter() {
+                    if let Ok((mut sprite)) = query_sprite.get_mut(*child) {
+                        match direction {
+                            FacingDirection::Left => {
+                                sprite.flip_y = true;
+                            }
+                            FacingDirection::Right => {
+                                sprite.flip_y = false;
+                            }
+                        };
+                    }
+                }
+            }
+        }
+    }
+
+}
+
+
 pub fn weapons_config_update_system(
     _asset_server: Res<AssetServer>,
     
